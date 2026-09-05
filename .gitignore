@@ -1,0 +1,107 @@
+# ============================================================
+# 模型权重 —— 绝对不能进 git（约 63 GB）
+# 复现方式见 README「环境与权重」，从 ModelScope / HuggingFace 拉取
+# ============================================================
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.gguf
+*.onnx
+models/
+checkpoints/
+loras/
+vae/
+clip/
+unet/
+diffusion_models/
+
+# ============================================================
+# 生成产物 —— 视频/音频体积大且数量多，不进 git
+# 只保留每个镜头的 meta.json 与极少数样片（用 ! 显式放行）
+# ============================================================
+output/
+outputs/
+shots/**/*.mp4
+shots/**/*.mov
+shots/**/*.mkv
+shots/**/*.webm
+shots/**/*.wav
+shots/**/*.mp3
+shots/**/*.flac
+shots/**/*.png
+shots/**/*.jpg
+shots/**/*.jpeg
+shots/**/*.webp
+# 但元数据与人工筛选记录必须进 git，它们是复现与手记的核心材料
+!shots/**/meta.json
+!shots/**/selected.txt
+!shots/**/ffprobe.txt
+!shots/**/README.md
+
+# 素材原图（定妆图、参考集）体积可控但版权敏感，默认不进；
+# 需要进时单独 ! 放行，并在 meta.json 里记 license
+assets/
+reference_images/
+
+# ============================================================
+# 成片交付物 —— 通过官网上传与平台发布，不进 git
+# ============================================================
+deliverables/
+*.mp4
+*.mov
+*.mkv
+
+# ============================================================
+# Python
+# ============================================================
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ============================================================
+# 密钥与本地配置 —— ComfyUI 无鉴权，任何地址/token 都不得入库
+# ============================================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.*
+config.local.*
+comfy_endpoint.txt
+tunnel.sh
+*.token
+
+# ============================================================
+# 编辑器 / 操作系统 / 临时文件
+# ============================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+.scratch/
+tmp/
+temp/
+*.log
+logs/
+
+# ============================================================
+# 校验器产生的报告（可复跑，不必入库）
+# ============================================================
+contracts/validate_report.txt
+contracts/negative_test_report.txt
+workflows/preflight_report.txt
+workflows/verify_map_report.txt

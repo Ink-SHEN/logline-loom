@@ -1,0 +1,642 @@
+{
+  "_meta": {
+    "generated": "2026-09-04",
+    "comfyui_version": "0.34.0",
+    "frontend_version": "1.51.9",
+    "verified_against": "/api/object_info 实测，非推测",
+    "patches_applied": [
+      "I2V: 删除悬空节点 119(ImageScaleToTotalPixels，缺必填 image) 与 120(GetImageSize)，二者无人引用但会被 ComfyUI 校验，导致 POST 必失败",
+      "I2V: 114.image 由不存在的 transparent_rgb_gaming_mouse.png 改为 example.png",
+      "R2V: 137/139.image 由不存在的 red_superboy_on_city_roof.png / mecha_dragon_lightning.png 改为 example.png",
+      "I2V: 115.aspect_ratio 由 '1:1 (Square)' 改为 '16:9 (Widescreen)'，与 T2V/R2V 统一（2026-09-04，按比赛画幅要求）"
+    ],
+    "warnings": [
+      "节点 ID 是复合编号（子图实例号:内部节点号），Agent 必须用完整字符串索引，workflow['131'] 取不到 140:131",
+      "duration_seconds 单位是【秒】浮点数，不是帧数。下游 ComfyMathExpression 会自动换算并对齐到 17 的倍数（5秒->124帧），禁止绕过它直接写 length",
+      "steps_normal / steps_turbo 所在节点是 PrimitiveInt，键名是 value 不是 steps。BasicScheduler 的 steps 是链接，改不了",
+      "R2V 的 prompt 在独立的 PrimitiveStringMultiline 节点 138 上，键名是 value；H3 节点 136 的 prompt 是链接",
+      "H3 没有 negative_prompt，也没有 CFG（用 BasicGuider 而非 CFGGuider），不要试图设置这两项",
+      "【已决策 2026-09-04】三份画幅统一为 '16:9 (Widescreen)'（比赛要求）。I2V 原为 '1:1 (Square)' 已改。若后期改选题需要竖屏，三份必须一起改，否则剪进同一条片子会画幅不一致",
+      "三份默认 megapixels 都是 0.4（约 480p）。试错阶段保持，成片批次调到 1.0 才是标称 768p（16:9 约 1344x768）",
+      "aspect_ratio 必须填完整字符串含括号，如 '16:9 (Widescreen)'",
+      "两份 turbo LoRA 现在都在节点上（fl2v_8step 与 ref2v_4step）。开启方式是把 turbo_enabled 改 true，ComfySwitchNode 会自动切模型与步数。R2V 的 turbo 是 4 步不是 8 步",
+      "ComfyUI 会校验图里每一个节点，包括输出未被使用的。任何引用不存在文件的节点都会让整个 POST 失败",
+      "image / lora_name / unet_name / vae_name / clip_name 的合法值就是节点上真实存在的文件，见 _enums。Agent 写入前应先比对，否则报 Value not in list",
+      "三份工作流的 filename_prefix 都是 'video/MiniMax_H3'，输出会挤在 $COMFY/output/video/ 下按序号递增。批量生成时应为每个镜头设不同前缀（如 shots/S012）便于归档",
+      "种子当前值：T2V/I2V = 757358688076805，R2V = 261662374822964。同种子+同提示词=同结果，生成多候选必须每个候选换种子",
+      "R2V 模板只接了 2 个参考图位（ref_image_0/1），H3 上限是 9 图。要更多须在画布加线重导",
+      "I2V 的 MiniMaxH3ImageToVideo 只接了 first_frame；该节点 optional 同时支持 last_frame，要做首尾帧控制须自行加线重导"
+    ],
+    "aspect_ratio_decision": {
+      "value": "16:9 (Widescreen)",
+      "decided_on": "2026-09-04",
+      "reason": "比赛要求，全片画幅统一",
+      "applies_to": [
+        "t2v",
+        "i2v",
+        "r2v"
+      ]
+    }
+  },
+  "_enums": {
+    "aspect_ratio": {
+      "class": "ResolutionSelector",
+      "field": "aspect_ratio",
+      "allowed": [
+        "1:1 (Square)",
+        "2:3 (Portrait Photo)",
+        "3:2 (Photo)",
+        "3:4 (Portrait Standard)",
+        "4:3 (Standard)",
+        "9:16 (Portrait Widescreen)",
+        "16:9 (Widescreen)",
+        "21:9 (Ultrawide)"
+      ]
+    },
+    "weight_dtype": {
+      "class": "UNETLoader",
+      "field": "weight_dtype",
+      "allowed": [
+        "default",
+        "fp8_e4m3fn",
+        "fp8_e4m3fn_fast",
+        "fp8_e5m2"
+      ]
+    },
+    "clip_type": {
+      "class": "CLIPLoader",
+      "field": "type",
+      "allowed": [
+        "stable_diffusion",
+        "stable_cascade",
+        "sd3",
+        "stable_audio",
+        "mochi",
+        "ltxv",
+        "pixart",
+        "cosmos",
+        "lumina2",
+        "wan",
+        "hidream",
+        "chroma",
+        "ace",
+        "omnigen2",
+        "qwen_image",
+        "hunyuan_image",
+        "flux2",
+        "ovis",
+        "longcat_image",
+        "cogvideox",
+        "lens",
+        "pixeldit",
+        "ideogram4",
+        "boogu",
+        "krea2",
+        "joyimage",
+        "mage",
+        "minimax"
+      ]
+    },
+    "sampler_name": {
+      "class": "KSamplerSelect",
+      "field": "sampler_name",
+      "allowed": [
+        "euler",
+        "euler_cfg_pp",
+        "euler_ancestral",
+        "euler_ancestral_cfg_pp",
+        "heun",
+        "heunpp2",
+        "exp_heun_2_x0",
+        "exp_heun_2_x0_sde",
+        "dpm_2",
+        "dpm_2_ancestral",
+        "lms",
+        "dpm_fast",
+        "dpm_adaptive",
+        "dpmpp_2s_ancestral",
+        "dpmpp_2s_ancestral_cfg_pp",
+        "dpmpp_sde",
+        "dpmpp_sde_gpu",
+        "dpmpp_2m",
+        "dpmpp_2m_cfg_pp",
+        "dpmpp_2m_sde",
+        "dpmpp_2m_sde_gpu",
+        "dpmpp_2m_sde_heun",
+        "dpmpp_2m_sde_heun_gpu",
+        "dpmpp_3m_sde",
+        "dpmpp_3m_sde_gpu",
+        "ddpm",
+        "lcm",
+        "ipndm",
+        "ipndm_v",
+        "deis",
+        "cfgpp_ud10_ab",
+        "res_multistep",
+        "res_multistep_cfg_pp",
+        "res_multistep_ancestral",
+        "res_multistep_ancestral_cfg_pp",
+        "gradient_estimation",
+        "gradient_estimation_cfg_pp",
+        "er_sde",
+        "seeds_2",
+        "seeds_3",
+        "sa_solver",
+        "sa_solver_pece",
+        "ddim",
+        "uni_pc",
+        "uni_pc_bh2"
+      ]
+    },
+    "scheduler": {
+      "class": "BasicScheduler",
+      "field": "scheduler",
+      "allowed": [
+        "simple",
+        "sgm_uniform",
+        "karras",
+        "exponential",
+        "ddim_uniform",
+        "beta",
+        "normal",
+        "linear_quadratic",
+        "kl_optimal"
+      ]
+    },
+    "color_space": {
+      "class": "CreateVideo",
+      "field": "color_space",
+      "allowed": [
+        "sRGB",
+        "HDR",
+        "HDR PQ"
+      ]
+    },
+    "bit_depth": {
+      "class": "CreateVideo",
+      "field": "bit_depth",
+      "allowed": [
+        "auto",
+        8,
+        10
+      ]
+    },
+    "ref_image_size": {
+      "class": "MiniMaxH3ReferenceToVideo",
+      "field": "ref_image_size",
+      "allowed": [
+        "match",
+        "max"
+      ]
+    },
+    "unet_name": {
+      "class": "UNETLoader",
+      "field": "unet_name",
+      "allowed": [
+        "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+        "minimax_h3_ref2va_pruned_int8_convrot.safetensors"
+      ]
+    },
+    "clip_name": {
+      "class": "CLIPLoader",
+      "field": "clip_name",
+      "allowed": [
+        "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
+      ]
+    },
+    "vae_name": {
+      "class": "VAELoader",
+      "field": "vae_name",
+      "allowed": [
+        "minimax_h3_audio_vae_fp32.safetensors",
+        "minimax_h3_video_vae_fp16.safetensors",
+        "pixel_space"
+      ]
+    },
+    "lora_name": {
+      "class": "LoraLoaderModelOnly",
+      "field": "lora_name",
+      "allowed": [
+        "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
+        "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors"
+      ]
+    },
+    "image": {
+      "class": "LoadImage",
+      "field": "image",
+      "allowed": [
+        "example.png"
+      ]
+    }
+  },
+  "t2v": {
+    "file": "workflow_api_t2v.json",
+    "label": "文生视频（不喂图）· FL2VA 权重",
+    "node_count": 23,
+    "fields": {
+      "prompt": {
+        "node": "140:131",
+        "key": "prompt"
+      },
+      "seed": {
+        "node": "140:129",
+        "key": "noise_seed"
+      },
+      "duration_seconds": {
+        "node": "140:133",
+        "key": "value"
+      },
+      "fps": {
+        "node": "140:130",
+        "key": "fps"
+      },
+      "bit_depth": {
+        "node": "140:130",
+        "key": "bit_depth"
+      },
+      "color_space": {
+        "node": "140:130",
+        "key": "color_space"
+      },
+      "aspect_ratio": {
+        "node": "115",
+        "key": "aspect_ratio"
+      },
+      "megapixels": {
+        "node": "115",
+        "key": "megapixels"
+      },
+      "multiple": {
+        "node": "115",
+        "key": "multiple"
+      },
+      "filename_prefix": {
+        "node": "92",
+        "key": "filename_prefix"
+      },
+      "save_format": {
+        "node": "92",
+        "key": "format"
+      },
+      "save_codec": {
+        "node": "92",
+        "key": "codec"
+      },
+      "turbo_enabled": {
+        "node": "140:139",
+        "key": "value"
+      },
+      "steps_normal": {
+        "node": "140:137",
+        "key": "value"
+      },
+      "steps_turbo": {
+        "node": "140:138",
+        "key": "value"
+      },
+      "unet_name": {
+        "node": "140:127",
+        "key": "unet_name"
+      },
+      "weight_dtype": {
+        "node": "140:127",
+        "key": "weight_dtype"
+      },
+      "clip_name": {
+        "node": "140:128",
+        "key": "clip_name"
+      },
+      "clip_type": {
+        "node": "140:128",
+        "key": "type"
+      },
+      "clip_device": {
+        "node": "140:128",
+        "key": "device"
+      },
+      "video_vae_name": {
+        "node": "140:119",
+        "key": "vae_name"
+      },
+      "audio_vae_name": {
+        "node": "140:120",
+        "key": "vae_name"
+      },
+      "lora_name": {
+        "node": "140:134",
+        "key": "lora_name"
+      },
+      "lora_strength": {
+        "node": "140:134",
+        "key": "strength_model"
+      },
+      "sampler_name": {
+        "node": "140:123",
+        "key": "sampler_name"
+      },
+      "scheduler": {
+        "node": "140:124",
+        "key": "scheduler"
+      },
+      "denoise": {
+        "node": "140:124",
+        "key": "denoise"
+      }
+    },
+    "derived_nodes": {
+      "frame_count_formula": {
+        "node": "140:132",
+        "key": "expression",
+        "class_type": "ComfyMathExpression",
+        "formula": "max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17",
+        "note": "输入 values.a <- 140:133（秒）；输出 slot 1 -> MiniMaxH3ImageToVideo.length"
+      }
+    },
+    "image_inputs": []
+  },
+  "i2v": {
+    "file": "workflow_api_i2v.json",
+    "label": "首帧生视频 · FL2VA 权重（与 T2V 共用，可同 session 连跑）",
+    "node_count": 24,
+    "fields": {
+      "prompt": {
+        "node": "105:104",
+        "key": "prompt"
+      },
+      "seed": {
+        "node": "105:15",
+        "key": "noise_seed"
+      },
+      "duration_seconds": {
+        "node": "105:111",
+        "key": "value"
+      },
+      "fps": {
+        "node": "105:91",
+        "key": "fps"
+      },
+      "bit_depth": {
+        "node": "105:91",
+        "key": "bit_depth"
+      },
+      "color_space": {
+        "node": "105:91",
+        "key": "color_space"
+      },
+      "aspect_ratio": {
+        "node": "115",
+        "key": "aspect_ratio"
+      },
+      "megapixels": {
+        "node": "115",
+        "key": "megapixels"
+      },
+      "multiple": {
+        "node": "115",
+        "key": "multiple"
+      },
+      "filename_prefix": {
+        "node": "92",
+        "key": "filename_prefix"
+      },
+      "save_format": {
+        "node": "92",
+        "key": "format"
+      },
+      "save_codec": {
+        "node": "92",
+        "key": "codec"
+      },
+      "turbo_enabled": {
+        "node": "105:126",
+        "key": "value"
+      },
+      "steps_normal": {
+        "node": "105:124",
+        "key": "value"
+      },
+      "steps_turbo": {
+        "node": "105:125",
+        "key": "value"
+      },
+      "unet_name": {
+        "node": "105:6",
+        "key": "unet_name"
+      },
+      "weight_dtype": {
+        "node": "105:6",
+        "key": "weight_dtype"
+      },
+      "clip_name": {
+        "node": "105:13",
+        "key": "clip_name"
+      },
+      "clip_type": {
+        "node": "105:13",
+        "key": "type"
+      },
+      "clip_device": {
+        "node": "105:13",
+        "key": "device"
+      },
+      "video_vae_name": {
+        "node": "105:11",
+        "key": "vae_name"
+      },
+      "audio_vae_name": {
+        "node": "105:24",
+        "key": "vae_name"
+      },
+      "lora_name": {
+        "node": "105:121",
+        "key": "lora_name"
+      },
+      "lora_strength": {
+        "node": "105:121",
+        "key": "strength_model"
+      },
+      "sampler_name": {
+        "node": "105:17",
+        "key": "sampler_name"
+      },
+      "scheduler": {
+        "node": "105:9",
+        "key": "scheduler"
+      },
+      "denoise": {
+        "node": "105:9",
+        "key": "denoise"
+      }
+    },
+    "derived_nodes": {
+      "frame_count_formula": {
+        "node": "105:107",
+        "key": "expression",
+        "class_type": "ComfyMathExpression",
+        "formula": "max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17",
+        "note": "输入 values.a <- 105:111（秒）"
+      }
+    },
+    "image_inputs": [
+      {
+        "role": "first_frame",
+        "node": "114",
+        "key": "image",
+        "prompt_ref": "<Picture 1>",
+        "feeds": "105:104.first_frame"
+      }
+    ]
+  },
+  "r2v": {
+    "file": "workflow_api_r2v.json",
+    "label": "参考图生视频 · Ref2VA 权重（与 FL2VA 不可同时驻留，必须分批跑）",
+    "node_count": 26,
+    "fields": {
+      "prompt": {
+        "node": "138",
+        "key": "value"
+      },
+      "seed": {
+        "node": "129",
+        "key": "noise_seed"
+      },
+      "duration_seconds": {
+        "node": "132",
+        "key": "value"
+      },
+      "fps": {
+        "node": "130",
+        "key": "fps"
+      },
+      "bit_depth": {
+        "node": "130",
+        "key": "bit_depth"
+      },
+      "color_space": {
+        "node": "130",
+        "key": "color_space"
+      },
+      "aspect_ratio": {
+        "node": "115",
+        "key": "aspect_ratio"
+      },
+      "megapixels": {
+        "node": "115",
+        "key": "megapixels"
+      },
+      "multiple": {
+        "node": "115",
+        "key": "multiple"
+      },
+      "filename_prefix": {
+        "node": "92",
+        "key": "filename_prefix"
+      },
+      "save_format": {
+        "node": "92",
+        "key": "format"
+      },
+      "save_codec": {
+        "node": "92",
+        "key": "codec"
+      },
+      "turbo_enabled": {
+        "node": "146",
+        "key": "value"
+      },
+      "steps_normal": {
+        "node": "143",
+        "key": "value"
+      },
+      "steps_turbo": {
+        "node": "144",
+        "key": "value"
+      },
+      "unet_name": {
+        "node": "127",
+        "key": "unet_name"
+      },
+      "weight_dtype": {
+        "node": "127",
+        "key": "weight_dtype"
+      },
+      "clip_name": {
+        "node": "128",
+        "key": "clip_name"
+      },
+      "clip_type": {
+        "node": "128",
+        "key": "type"
+      },
+      "clip_device": {
+        "node": "128",
+        "key": "device"
+      },
+      "video_vae_name": {
+        "node": "119",
+        "key": "vae_name"
+      },
+      "audio_vae_name": {
+        "node": "120",
+        "key": "vae_name"
+      },
+      "lora_name": {
+        "node": "145",
+        "key": "lora_name"
+      },
+      "lora_strength": {
+        "node": "145",
+        "key": "strength_model"
+      },
+      "sampler_name": {
+        "node": "123",
+        "key": "sampler_name"
+      },
+      "scheduler": {
+        "node": "124",
+        "key": "scheduler"
+      },
+      "denoise": {
+        "node": "124",
+        "key": "denoise"
+      },
+      "ref_image_size": {
+        "node": "136",
+        "key": "ref_image_size"
+      }
+    },
+    "derived_nodes": {
+      "frame_count_formula": {
+        "node": "131",
+        "key": "expression",
+        "class_type": "ComfyMathExpression",
+        "formula": "max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17",
+        "note": "输入 values.a <- 132（秒）"
+      }
+    },
+    "image_inputs": [
+      {
+        "role": "ref_image_0",
+        "node": "137",
+        "key": "image",
+        "prompt_ref": "<Picture 1>",
+        "feeds": "136.ref_images.ref_image_0"
+      },
+      {
+        "role": "ref_image_1",
+        "node": "139",
+        "key": "image",
+        "prompt_ref": "<Picture 2>",
+        "feeds": "136.ref_images.ref_image_1"
+      }
+    ],
+    "limits": {
+      "max_images": 9,
+      "max_videos": 3,
+      "video_total_seconds_max": 15,
+      "max_audios": 3,
+      "audio_cannot_be_sole_input": true,
+      "max_total_files": 12
+    }
+  }
+}

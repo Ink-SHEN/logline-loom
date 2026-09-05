@@ -1,0 +1,620 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "film-agent/contracts/v1.0.json",
+  "title": "电影 Agent 七道交接面契约 v1.0",
+  "description": "三人并行开发的唯一钥匙。每份产物都是一个独立 JSON 文件，落在 shots/ 或 artifacts/ 下，进 git。契约变更必须全组三人同意。所有枚举取值均来自 2026-09-04 对 DGX Spark 节点 /api/object_info 的实测，不是猜的。",
+
+  "$defs": {
+
+    "producer": {
+      "type": "object",
+      "required": ["kind", "name"],
+      "properties": {
+        "kind": { "enum": ["human", "agent"] },
+        "name": { "type": "string", "description": "人名或 Agent 名，如 '导演' / 'screenwriter_agent'" },
+        "agent_version": { "type": "string", "description": "Agent 产出的产物必须带版本号，用于回放评测" }
+      }
+    },
+
+    "human_gate": {
+      "type": "object",
+      "required": ["required", "status"],
+      "properties": {
+        "required": { "type": "boolean" },
+        "status": { "enum": ["pending", "approved", "rejected", "not_required"] },
+        "reviewer": { "type": ["string", "null"] },
+        "reviewed_at": { "type": ["string", "null"], "format": "date-time" },
+        "reason": { "type": "string" }
+      },
+      "description": "人机边界。required=true 且 status != approved 时，下游 Agent 必须阻塞等待，禁止自动流转。全片只有两处强制关口：剧本确认（contract 02）与粗剪确认（contract 07）"
+    },
+
+    "aspect_ratio": {
+      "enum": [
+        "1:1 (Square)",
+        "2:3 (Portrait Photo)",
+        "3:2 (Photo)",
+        "3:4 (Portrait Standard)",
+        "4:3 (Standard)",
+        "9:16 (Portrait Widescreen)",
+        "16:9 (Widescreen)",
+        "21:9 (Ultrawide)"
+      ],
+      "description": "ResolutionSelector.aspect_ratio 的 8 个合法值，必须含括号后缀。本项目已锁定 '16:9 (Widescreen)'"
+    },
+
+    "workflow_type": {
+      "enum": ["T2V", "I2V", "R2V"],
+      "description": "T2V=纯文生视频；I2V=首帧图生视频(FL2VA)；R2V=参考图生视频(Ref2VA)。FL2VA 与 Ref2VA 不能同时常驻显存，GPU 排班必须按工作流类型分批，不按人分批"
+    },
+
+    "node_id_map_ref": {
+      "type": "object",
+      "required": ["source", "prompt", "seed", "duration_seconds", "aspect_ratio", "megapixels", "filename_prefix"],
+      "description": "从 node_id_map.json 抄来的 {语义: [节点ID, 键名]}。禁止硬编码节点 ID。T2V/I2V 的 ID 是子图摊平后的复合编号如 '140:131'，必须用完整字符串索引，workflow['131'] 取不到",
+      "additionalProperties": {
+        "type": "array",
+        "prefixItems": [{ "type": "string" }, { "type": "string" }],
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "properties": {
+        "source": { "type": "string", "description": "映射表文件路径与版本，如 'workflows/node_id_map.json@<git短hash>'" }
+      }
+    },
+
+    "asset_ref": {
+      "type": "object",
+      "required": ["node_filename", "source_path", "license"],
+      "properties": {
+        "node_filename": {
+          "type": "string",
+          "description": "ComfyUI input/ 目录下的文件名。素材必须先 POST /upload/image 传上去、再重查 object_info 确认它出现在 LoadImage.image 的枚举里，才能填进工作流；否则报 Value not in list: image"
+        },
+        "source_path": { "type": "string", "description": "仓库内或本地原始路径" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "license": { "enum": ["self_generated", "self_shot", "cc0", "licensed", "unknown"], "description": "unknown 的素材禁止进成片" },
+        "generated_by": { "type": "string", "description": "若为 AI 生成的参考图，记录用什么模型生成" }
+      }
+    },
+
+    "ffprobe_result": {
+      "type": "object",
+      "required": ["duration_seconds", "video_stream", "audio_stream"],
+      "properties": {
+        "duration_seconds": { "type": "number", "exclusiveMinimum": 0 },
+        "video_stream": {
+          "type": "object",
+          "required": ["codec_name", "width", "height", "avg_frame_rate"],
+          "properties": {
+            "codec_name": { "type": "string" },
+            "width": { "type": "integer", "minimum": 64 },
+            "height": { "type": "integer", "minimum": 64 },
+            "avg_frame_rate": { "type": "string", "description": "H3 标称 24fps，ffprobe 输出形如 '24/1'" },
+            "pix_fmt": { "type": "string" }
+          }
+        },
+        "audio_stream": {
+          "type": ["object", "null"],
+          "required": ["codec_name", "sample_rate", "channels"],
+          "description": "H3 原生出声，标称 32kHz 双声道。为 null 视为质检不合格",
+          "properties": {
+            "codec_name": { "type": "string" },
+            "sample_rate": { "type": "string", "description": "期望 '32000'" },
+            "channels": { "type": "integer", "description": "期望 2" }
+          }
+        }
+      }
+    },
+
+    "envelope": {
+      "type": "object",
+      "required": ["schema_version", "artifact_id", "contract", "created_at", "producer"],
+      "properties": {
+        "schema_version": { "const": "1.0" },
+        "artifact_id": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+$", "description": "全局唯一，下游用 upstream_refs 引用它" },
+        "contract": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "producer": { "$ref": "#/$defs/producer" },
+        "upstream_refs": { "type": "array", "items": { "type": "string" }, "description": "上游产物的 artifact_id 列表，构成可追溯链" },
+        "notes": { "type": "string" }
+      }
+    },
+
+    "qc_check_name": {
+      "enum": [
+        "duration_in_range",
+        "fps_is_24",
+        "has_video_stream",
+        "has_audio_stream",
+        "audio_32k_stereo",
+        "resolution_matches_aspect_ratio",
+        "prompt_adherence",
+        "character_consistency",
+        "scene_consistency",
+        "motion_quality",
+        "audio_matches_scene",
+        "no_visual_artifact",
+        "no_red_line_violation"
+      ]
+    },
+
+    "c01_brief": {
+      "title": "① 片约 → 编剧 Agent",
+      "description": "人工产出。全片唯一的源头输入，定死了后面所有 Agent 不能自己改的东西",
+      "type": "object",
+      "required": ["envelope", "payload"],
+      "properties": {
+        "envelope": { "$ref": "#/$defs/envelope", "properties": { "contract": { "const": "c01_brief" } } },
+        "payload": {
+          "type": "object",
+          "required": ["logline", "theme", "target_duration_seconds", "aspect_ratio", "visual_style", "red_lines"],
+          "properties": {
+            "logline": {
+              "type": "string", "minLength": 20, "maxLength": 400,
+              "description": "一句话故事。官方建议结构：一个人 + 一个空间 + 一件小事。本地视频模型擅长氛围/特写/空镜/声音叙事，不擅长复杂打斗与多人对口型，选题要顺着这个能力边界走"
+            },
+            "theme": { "type": "string", "minLength": 5, "description": "主题归属，须扣住大赛主题「用 AI，提前看见未来」" },
+            "target_duration_seconds": { "type": "number", "minimum": 60, "maximum": 300, "description": "成片 1–5 分钟（主赛道硬要求）" },
+            "aspect_ratio": { "$ref": "#/$defs/aspect_ratio" },
+            "visual_style": { "type": "string", "minLength": 5, "description": "视觉风格锚点。R2V 参考集与所有镜头提示词都要向它对齐，否则风格一致性会散" },
+            "audio_style": { "type": "string", "description": "声音风格。H3 原生出音频，声音叙事是本模型的强项，值得单独定调" },
+            "main_character": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "appearance": { "type": "string", "description": "定妆描述，会原样进入 R2V 参考图生成提示词，必须足够具体" },
+                "want": { "type": "string", "description": "他想要什么" },
+                "obstacle": { "type": "string", "description": "挡在路上的是什么" }
+              }
+            },
+            "red_lines": {
+              "type": "array", "minItems": 1, "items": { "type": "string" },
+              "description": "禁止出现的内容。已知硬红线：《黑客帝国》《银翼杀手2049》《2001太空漫游》《星际穿越》等影片的角色、台词、造型、剧照与片名"
+            },
+            "gate": { "$ref": "#/$defs/human_gate" }
+          }
+        }
+      }
+    },
+
+    "c02_screenplay": {
+      "title": "② 编剧 Agent → 分镜 Agent",
+      "description": "【强制人工关口之一：剧本确认】status 不为 approved 时，分镜 Agent 必须阻塞",
+      "type": "object",
+      "required": ["envelope", "payload"],
+      "properties": {
+        "envelope": { "$ref": "#/$defs/envelope", "properties": { "contract": { "const": "c02_screenplay" } } },
+        "payload": {
+          "type": "object",
+          "required": ["scenes", "emotion_curve", "dialogue_language", "gate"],
+          "properties": {
+            "scenes": {
+              "type": "array", "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["scene_id", "location", "time_of_day", "summary", "characters", "beats"],
+                "properties": {
+                  "scene_id": { "type": "string", "pattern": "^SC[0-9]{2}$" },
+                  "location": { "type": "string", "description": "空间。选题遵循「一个空间」原则时全片应只有 1–2 个" },
+                  "time_of_day": { "enum": ["dawn", "day", "dusk", "night", "timeless"] },
+                  "summary": { "type": "string", "minLength": 5 },
+                  "characters": {
+                    "type": "array",
+                    "items": {
+                      "type": "object", "required": ["name"],
+                      "properties": { "name": { "type": "string" }, "appearance": { "type": "string" } }
+                    }
+                  },
+                  "beats": {
+                    "type": "array", "minItems": 1,
+                    "description": "一个 beat 大致对应一个 4–8 秒镜头，分镜 Agent 会按它切",
+                    "items": {
+                      "type": "object", "required": ["order", "action"],
+                      "properties": {
+                        "order": { "type": "integer", "minimum": 1 },
+                        "action": { "type": "string", "minLength": 3 },
+                        "dialogue": { "type": "string", "description": "可空。H3 不擅长多人对口型，台词尽量做成画外音或单人" },
+                        "emotion": { "type": "string" },
+                        "estimated_seconds": { "type": "number", "minimum": 1, "maximum": 60 }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "emotion_curve": {
+              "type": "array", "minItems": 2,
+              "description": "情绪曲线，用于分镜决定节奏与镜头长短",
+              "items": {
+                "type": "object", "required": ["beat", "intensity"],
+                "properties": {
+                  "beat": { "type": "string", "description": "如 '建立'/'打破'/'最低点'/'转折'/'收束'" },
+                  "intensity": { "type": "number", "minimum": 0, "maximum": 1 }
+                }
+              }
+            },
+            "dialogue_language": { "enum": ["zh", "en", "none"] },
+            "total_estimated_seconds": { "type": "number", "minimum": 60, "maximum": 300 },
+            "gate": { "$ref": "#/$defs/human_gate" }
+          }
+        }
+      }
+    },
+
+    "c03_shotlist": {
+      "title": "③ 分镜 Agent → 提示词 Agent",
+      "description": "镜头清单。workflow_type 在这里定下来，直接决定 GPU 排班分批",
+      "type": "object",
+      "required": ["envelope", "payload"],
+      "properties": {
+        "envelope": { "$ref": "#/$defs/envelope", "properties": { "contract": { "const": "c03_shotlist" } } },
+        "payload": {
+          "type": "object",
+          "required": ["shots"],
+          "properties": {
+            "shots": {
+              "type": "array", "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["shot_id", "scene_id", "order", "duration_seconds", "aspect_ratio", "shot_size", "camera_move", "visual_description", "audio_description", "workflow_type"],
+                "properties": {
+                  "shot_id": { "type": "string", "pattern": "^S[0-9]{3}$" },
+                  "scene_id": { "type": "string", "pattern": "^SC[0-9]{2}$" },
+                  "order": { "type": "integer", "minimum": 1, "description": "成片中的播放顺序" },
+                  "duration_seconds": {
+                    "type": "number", "minimum": 1, "maximum": 15,
+                    "description": "分镜目标 4–8 秒。H3 单次生成上限约 15 秒；下游 ComfyMathExpression 会把秒数换算成帧并对齐到 17 的倍数（5秒→124帧），禁止绕过它直接写帧数"
+                  },
+                  "aspect_ratio": { "$ref": "#/$defs/aspect_ratio" },
+                  "shot_size": { "enum": ["extreme_close_up", "close_up", "medium", "medium_wide", "wide", "extreme_wide"] },
+                  "camera_move": { "enum": ["static", "push_in", "pull_out", "pan_left", "pan_right", "tilt_up", "tilt_down", "tracking", "orbit", "crane", "handheld"] },
+                  "visual_description": { "type": "string", "minLength": 10, "description": "画面内容，中文即可，提示词 Agent 负责译成英文" },
+                  "audio_description": { "type": "string", "minLength": 5, "description": "环境音 + 音乐 + 对白。H3 一次成型出声，这里写清楚能省掉后期配音" },
+                  "workflow_type": { "$ref": "#/$defs/workflow_type" },
+                  "needs_reference_assets": { "type": "boolean", "description": "I2V/R2V 必须为 true" },
+                  "consistency_group": { "type": ["string", "null"], "description": "同一角色/场景的镜头填同一组名，R2V 参考集按组复用，是风格一致性的抓手" },
+                  "reference_note": { "type": "string", "description": "需要什么参考素材，如 '主角正面定妆图'" },
+                  "gate": { "$ref": "#/$defs/human_gate" }
+                }
+              }
+            },
+            "batch_plan": {
+              "type": "object",
+              "description": "GPU 排班建议。按 workflow_type 分批，FL2VA 批次（T2V+I2V）连跑，Ref2VA 批次（R2V）单独一个时段",
+              "properties": {
+                "fl2va_shots": { "type": "array", "items": { "type": "string" } },
+                "ref2va_shots": { "type": "array", "items": { "type": "string" } },
+                "candidates_per_shot": { "type": "integer", "minimum": 1, "maximum": 8 }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "c04_gen_request": {
+      "title": "④ 提示词 Agent → 生成 Agent",
+      "description": "最靠近机器的一道契约，字段必须能直接落到节点上。generation 里的每个键都对应 node_ids 里的一条映射",
+      "type": "object",
+      "required": ["envelope", "payload"],
+      "properties": {
+        "envelope": { "$ref": "#/$defs/envelope", "properties": { "contract": { "const": "c04_gen_request" } } },
+        "payload": {
+          "type": "object",
+          "required": ["shot_id", "candidate_id", "workflow", "generation", "assets"],
+          "properties": {
+            "shot_id": { "type": "string", "pattern": "^S[0-9]{3}$" },
+            "candidate_id": { "type": "string", "pattern": "^S[0-9]{3}_c[0-9]{2}$", "description": "同一镜头的第几个候选。多候选靠换 seed，不靠改提示词" },
+            "retry_of": { "type": ["string", "null"], "description": "重试时填上一次 c05_gen_result 的 artifact_id，形成闭环证据" },
+            "workflow": {
+              "type": "object",
+              "required": ["type", "api_json", "node_ids"],
+              "properties": {
+                "type": { "$ref": "#/$defs/workflow_type" },
+                "api_json": { "enum": ["workflow_api_t2v.json", "workflow_api_i2v.json", "workflow_api_r2v.json"] },
+                "node_ids": { "$ref": "#/$defs/node_id_map_ref" },
+                "turbo_enabled": {
+                  "type": "boolean", "default": false,
+                  "description": "改的是 turbo_enabled 那个 PrimitiveBoolean 节点。true 时 ComfySwitchNode 自动切到 turbo LoRA 并换步数：T2V/I2V 20→8 步(约2.5倍)，R2V 20→4 步(约5倍)。推理优化是「技术创新与模型工程 25 分」的明面得分点"
+                }
+              }
+            },
+            "generation": {
+              "type": "object",
+              "required": ["prompt", "duration_seconds", "seed", "aspect_ratio", "megapixels", "fps", "filename_prefix"],
+              "properties": {
+                "prompt": {
+                  "type": "string", "minLength": 30,
+                  "description": "英文。可用 [0s-2s] 这类时间码分段描述。I2V/R2V 必须用 <Picture N> 引用图片且序号对应 ref_image_0/ref_image_1，音频用 <Audio 1>。H3 没有 negative_prompt 也没有 CFG（用 BasicGuider 而非 CFGGuider），不要试图设这两项"
+                },
+                "prompt_language": { "const": "en" },
+                "timecodes": { "type": "array", "items": { "type": "string", "pattern": "^\\[[0-9]+s-[0-9]+s\\]$" } },
+                "duration_seconds": { "type": "number", "minimum": 1, "maximum": 15, "description": "单位是秒（浮点），写进 PrimitiveFloat 节点，不是帧数" },
+                "seed": { "type": "integer", "minimum": 0, "maximum": 9007199254740991, "description": "同种子+同提示词=同结果。每个候选必须换种子" },
+                "aspect_ratio": { "const": "16:9 (Widescreen)", "description": "本项目已锁定" },
+                "megapixels": {
+                  "type": "number", "minimum": 0.1, "maximum": 16,
+                  "description": "试错阶段 0.4（16:9 约 848x480）；成片批次调 1.0（16:9 约 1344x768）才是 H3 标称 768p，直接影响视听完成度得分"
+                },
+                "multiple": { "type": "integer", "enum": [8, 16, 32, 64], "description": "分辨率对齐倍数，模板默认 32" },
+                "fps": { "const": 24 },
+                "bit_depth": { "enum": ["auto", 8, 10], "description": "注意枚举里混有整数，8 和 10 是数字不是字符串" },
+                "color_space": { "enum": ["sRGB", "HDR", "HDR PQ"] },
+                "steps": {
+                  "type": "integer", "minimum": 1, "maximum": 50,
+                  "description": "写进 steps_normal 或 steps_turbo 对应的 PrimitiveInt 节点，键名是 value 不是 steps；BasicScheduler.steps 是链接改不了。turbo_enabled=false 时生效的是 steps_normal，true 时是 steps_turbo"
+                },
+                "sampler_name": { "const": "res_multistep" },
+                "scheduler": { "const": "simple" },
+                "filename_prefix": {
+                  "type": "string", "pattern": "^shots/S[0-9]{3}(_c[0-9]{2})?$",
+                  "description": "每镜头独立前缀。三份模板默认都是 'video/MiniMax_H3'，不改的话所有产物挤在 output/video/ 下按序号递增，无法归档"
+                }
+              }
+            },
+            "assets": {
+              "type": "object",
+              "description": "T2V 全空；I2V 只填 first_frame；R2V 填 ref_images。R2V 上限：9 图 / 3 视频(合计≤15秒) / 3 音频，总文件≤12，且音频不能作为唯一输入",
+              "properties": {
+                "first_frame": { "$ref": "#/$defs/asset_ref" },
+                "ref_images": { "type": "array", "maxItems": 9, "items": { "$ref": "#/$defs/asset_ref" } },
+                "ref_videos": { "type": "array", "maxItems": 3, "items": { "$ref": "#/$defs/asset_ref" } },
+                "ref_audios": { "type": "array", "maxItems": 3, "items": { "$ref": "#/$defs/asset_ref" } },
+                "ref_image_size": { "enum": ["match", "max"], "description": "R2V 专有，模板默认 match" }
+              }
+            }
+          },
+          "allOf": [
+            {
+              "description": "工作流类型与素材必须对得上。填错了会白烧一整轮 GPU 才在 ComfyUI 里报错",
+              "if": {
+                "properties": { "workflow": { "properties": { "type": { "const": "T2V" } } } },
+                "required": ["workflow"]
+              },
+              "then": {
+                "description": "T2V 不该带任何素材",
+                "properties": {
+                  "assets": {
+                    "not": {
+                      "anyOf": [
+                        { "required": ["first_frame"] },
+                        { "properties": { "ref_images": { "type": "array", "minItems": 1 } }, "required": ["ref_images"] },
+                        { "properties": { "ref_videos": { "type": "array", "minItems": 1 } }, "required": ["ref_videos"] },
+                        { "properties": { "ref_audios": { "type": "array", "minItems": 1 } }, "required": ["ref_audios"] }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": { "workflow": { "properties": { "type": { "const": "I2V" } } } },
+                "required": ["workflow"]
+              },
+              "then": {
+                "properties": { "assets": { "required": ["first_frame"] } }
+              }
+            },
+            {
+              "if": {
+                "properties": { "workflow": { "properties": { "type": { "const": "R2V" } } } },
+                "required": ["workflow"]
+              },
+              "then": {
+                "properties": {
+                  "assets": {
+                    "required": ["ref_images"],
+                    "properties": { "ref_images": { "minItems": 1 } }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "c05_gen_result": {
+      "title": "⑤ 生成 Agent → 质检 Agent",
+      "description": "params_snapshot 与 model_files 是复现能力的核心证据，必须从第一个镜头就记，事后补不回来",
+      "type": "object",
+      "required": ["envelope", "payload"],
+      "properties": {
+        "envelope": { "$ref": "#/$defs/envelope", "properties": { "contract": { "const": "c05_gen_result" } } },
+        "payload": {
+          "type": "object",
+          "required": ["shot_id", "candidate_id", "output", "ffprobe", "timing", "params_snapshot", "model_files"],
+          "properties": {
+            "shot_id": { "type": "string", "pattern": "^S[0-9]{3}$" },
+            "candidate_id": { "type": "string", "pattern": "^S[0-9]{3}_c[0-9]{2}$" },
+            "comfy_prompt_id": { "type": "string", "description": "POST /prompt 返回的 id，可用 GET /history/<id> 追溯，是可观测性的抓手" },
+            "output": {
+              "type": "object", "required": ["path", "sha256", "size_bytes"],
+              "properties": {
+                "path": { "type": "string", "description": "形如 shots/S001/c01/video.mp4" },
+                "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+                "size_bytes": { "type": "integer", "minimum": 1 }
+              }
+            },
+            "ffprobe": { "$ref": "#/$defs/ffprobe_result" },
+            "timing": {
+              "type": "object", "required": ["submitted_at", "finished_at", "elapsed_seconds"],
+              "properties": {
+                "submitted_at": { "type": "string", "format": "date-time" },
+                "finished_at": { "type": "string", "format": "date-time" },
+                "elapsed_seconds": { "type": "number", "minimum": 0 },
+                "queue_position_at_submit": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "params_snapshot": {
+              "type": "object",
+              "description": "实际写进工作流的最终值。重试时可能与 c04 的请求不同，这里记的是真跑的那份",
+              "required": ["prompt", "seed", "duration_seconds", "megapixels", "steps", "turbo_enabled"],
+              "properties": {
+                "prompt": { "type": "string" },
+                "seed": { "type": "integer" },
+                "duration_seconds": { "type": "number" },
+                "frame_count_actual": { "type": "integer", "description": "17 对齐后的真实帧数，如 5 秒→124" },
+                "megapixels": { "type": "number" },
+                "width": { "type": "integer" },
+                "height": { "type": "integer" },
+                "steps": { "type": "integer" },
+                "turbo_enabled": { "type": "boolean" },
+                "filename_prefix": { "type": "string" }
+              }
+            },
+            "model_files": {
+              "type": "object",
+              "required": ["unet_name", "clip_name", "video_vae_name", "audio_vae_name"],
+              "properties": {
+                "unet_name": { "enum": ["minimax_h3_fl2va_pruned_int8_convrot.safetensors", "minimax_h3_ref2va_pruned_int8_convrot.safetensors"] },
+                "weight_dtype": { "enum": ["default", "fp8_e4m3fn", "fp8_e4m3fn_fast", "fp8_e5m2"] },
+                "clip_name": { "const": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors" },
+                "clip_type": { "const": "minimax" },
+                "video_vae_name": { "const": "minimax_h3_video_vae_fp16.safetensors" },
+                "audio_vae_name": { "const": "minimax_h3_audio_vae_fp32.safetensors" },
+                "lora_name": { "type": ["string", "null"], "enum": [null, "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors", "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors"] }
+              }
+            },
+            "submitted_by": { "type": "string", "description": "谁占的 GPU 时段，用于任务登记表对账" }
+          }
+        }
+      }
+    },
+
+    "c06_qc_report": {
+      "title": "⑥ 质检 Agent → 重试 Agent / 剪辑 Agent",
+      "description": "route_to 决定分流。failed 走 retry，pass 走 edit，判不了的走 human。suggested_change 必须是可执行的字段补丁，不能只写'质量不好'",
+      "type": "object",
+      "required": ["envelope", "payload"],
+      "properties": {
+        "envelope": { "$ref": "#/$defs/envelope", "properties": { "contract": { "const": "c06_qc_report" } } },
+        "payload": {
+          "type": "object",
+          "required": ["shot_id", "candidate_id", "verdict", "checks", "route_to"],
+          "properties": {
+            "shot_id": { "type": "string", "pattern": "^S[0-9]{3}$" },
+            "candidate_id": { "type": "string", "pattern": "^S[0-9]{3}_c[0-9]{2}$" },
+            "verdict": { "enum": ["pass", "pass_with_notes", "fail"] },
+            "score": { "type": "number", "minimum": 0, "maximum": 10, "description": "多候选排序用，人工筛选时作为参考而非决定" },
+            "checks": {
+              "type": "array", "minItems": 1,
+              "items": {
+                "type": "object", "required": ["name", "status"],
+                "properties": {
+                  "name": { "$ref": "#/$defs/qc_check_name" },
+                  "status": { "enum": ["pass", "fail", "skipped"] },
+                  "detail": { "type": "string" },
+                  "measured": { "type": "string", "description": "实测值，如 '23.98fps' / '48000Hz 单声道'" }
+                }
+              }
+            },
+            "failed_items": { "type": "array", "items": { "type": "string" } },
+            "root_cause": { "type": "string", "description": "失败归因。这一栏是创作手记「失败与修正」章节的直接素材" },
+            "suggested_change": {
+              "type": "object",
+              "required": ["action"],
+              "properties": {
+                "action": {
+                  "enum": ["new_seed", "rewrite_prompt", "change_duration", "change_reference_asset", "switch_workflow_type", "raise_megapixels", "enable_turbo", "manual_intervention"]
+                },
+                "patch": {
+                  "type": "object",
+                  "description": "要覆盖 c04 payload.generation 里的哪些字段，如 {\"seed\": 123, \"megapixels\": 1.0}",
+                  "additionalProperties": true
+                },
+                "rationale": { "type": "string" }
+              }
+            },
+            "retry_count": { "type": "integer", "minimum": 0, "description": "同一镜头已重试次数。超过上限必须转 manual_intervention，防止无限烧 GPU" },
+            "max_retries": { "type": "integer", "minimum": 1, "default": 3 },
+            "route_to": { "enum": ["retry", "edit", "human"] },
+            "gate": { "$ref": "#/$defs/human_gate" }
+          }
+        }
+      }
+    },
+
+    "c07_edit_decision": {
+      "title": "⑦ 剪辑 Agent → 成片",
+      "description": "【强制人工关口之二：粗剪确认】compliance 每一项都要有证据路径，这是提交前自查清单的机器可读版",
+      "type": "object",
+      "required": ["envelope", "payload"],
+      "properties": {
+        "envelope": { "$ref": "#/$defs/envelope", "properties": { "contract": { "const": "c07_edit_decision" } } },
+        "payload": {
+          "type": "object",
+          "required": ["timeline", "final_output", "compliance", "gate"],
+          "properties": {
+            "timeline": {
+              "type": "array", "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["order", "shot_id", "candidate_id", "source_path", "in_point_seconds", "out_point_seconds"],
+                "properties": {
+                  "order": { "type": "integer", "minimum": 1 },
+                  "shot_id": { "type": "string", "pattern": "^S[0-9]{3}$" },
+                  "candidate_id": { "type": "string", "pattern": "^S[0-9]{3}_c[0-9]{2}$" },
+                  "source_path": { "type": "string" },
+                  "in_point_seconds": { "type": "number", "minimum": 0 },
+                  "out_point_seconds": { "type": "number", "exclusiveMinimum": 0 },
+                  "transition": { "enum": ["cut", "dissolve", "fade_in", "fade_out", "none"] },
+                  "subtitle": { "type": ["string", "null"] }
+                }
+              }
+            },
+            "audio_mix": {
+              "type": "object",
+              "properties": {
+                "dialogue_gain_db": { "type": "number" },
+                "music_gain_db": { "type": "number" },
+                "sfx_gain_db": { "type": "number" },
+                "loudness_target_lufs": { "type": "number", "description": "网络平台常见目标 -14 LUFS" },
+                "measured_loudness_lufs": { "type": "number" }
+              }
+            },
+            "final_output": {
+              "type": "object",
+              "required": ["path", "container", "duration_seconds", "sha256", "size_bytes"],
+              "properties": {
+                "path": { "type": "string" },
+                "container": { "const": "mp4" },
+                "duration_seconds": { "type": "number", "minimum": 60, "maximum": 300, "description": "主赛道要求 1–5 分钟" },
+                "resolution": { "type": "string", "description": "如 '1344x768'" },
+                "fps": { "const": 24 },
+                "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+                "size_bytes": { "type": "integer", "minimum": 1, "maximum": 629145600, "description": "官网上传上限 600MB" }
+              }
+            },
+            "compliance": {
+              "type": "object",
+              "required": ["ai_label_present", "ai_label_position", "red_line_self_check", "duration_in_range", "size_under_limit", "evidence_paths"],
+              "properties": {
+                "ai_label_present": { "type": "boolean", "description": "主赛道硬要求：视频须标注 AI 生成识别标志" },
+                "ai_label_position": { "enum": ["opening_card", "ending_card", "corner_persistent", "opening_and_ending"] },
+                "red_line_self_check": { "type": "boolean", "description": "逐条比对 c01 的 red_lines 后确认为 true" },
+                "duration_in_range": { "type": "boolean" },
+                "size_under_limit": { "type": "boolean" },
+                "asset_licenses_cleared": { "type": "boolean", "description": "所有 asset_ref.license 均不为 unknown" },
+                "evidence_paths": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "每项自查对应的证据文件，如截图、ffprobe 输出、日志" }
+              }
+            },
+            "deliverables": {
+              "type": "object",
+              "description": "提交物清单，对应主赛道要求",
+              "properties": {
+                "platform_url": { "type": "string", "description": "B站/小红书/抖音链接" },
+                "studio_url": { "type": "string", "description": "电影 Agent 魔搭创空间链接（Agent 赛道提交项）" },
+                "blog_url": { "type": "string", "description": "魔搭开发者实践创作手记链接" },
+                "upload_file_path": { "type": "string", "description": "官网上传的原文件" }
+              }
+            },
+            "gate": { "$ref": "#/$defs/human_gate" }
+          }
+        }
+      }
+    }
+  }
+}

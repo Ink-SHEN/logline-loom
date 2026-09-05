@@ -1,0 +1,406 @@
+{
+  "_说明": "7 份示例产物，每道契约一份。作用有两个：① 跑 validate_contract.py --selftest 可以证明契约本身是自洽的、校验器是通的；② 组员写自己的产物时直接照抄结构，只换内容。注意：故事内容全是占位示例，真实选题要在会上定（任务 #3），不要照着这个拍。",
+
+  "c01_brief": {
+    "envelope": {
+      "schema_version": "1.0",
+      "artifact_id": "brief.v1",
+      "contract": "c01_brief",
+      "created_at": "2026-09-05T10:00:00+08:00",
+      "producer": { "kind": "human", "name": "总导演" },
+      "upstream_refs": [],
+      "notes": "示例占位，非最终选题"
+    },
+    "payload": {
+      "logline": "一位独自值守射电望远镜阵列的夜班技师，在最后一个班次里收到一段来自自己未来的信号。",
+      "theme": "用 AI，提前看见未来：当预知变成日常工具，人如何面对已经被剧透的自己",
+      "target_duration_seconds": 150,
+      "aspect_ratio": "16:9 (Widescreen)",
+      "visual_style": "冷色调实拍质感，单一控制室空间，屏幕辉光作为主要光源，大量特写与空镜",
+      "audio_style": "低频机房嗡鸣为底，信号提示音作为叙事动机，结尾收到近乎静默",
+      "main_character": {
+        "name": "技术员",
+        "appearance": "四十岁上下，深色工装，短发花白，眼下有明显疲态，左手腕戴旧式机械表",
+        "want": "在下班前确认那段信号是不是真的",
+        "obstacle": "系统要求两人复核，而这一班只有他一个人"
+      },
+      "red_lines": [
+        "不得出现《黑客帝国》《银翼杀手2049》《2001太空漫游》《星际穿越》的角色、台词、造型、剧照与片名",
+        "不得出现真实企业或机构的标识",
+        "不得出现未成年人",
+        "不得使用未授权的第三方素材"
+      ],
+      "gate": {
+        "required": true,
+        "status": "approved",
+        "reviewer": "全组三人",
+        "reviewed_at": "2026-09-05T11:30:00+08:00",
+        "reason": "会上通过"
+      }
+    }
+  },
+
+  "c02_screenplay": {
+    "envelope": {
+      "schema_version": "1.0",
+      "artifact_id": "screenplay.v1",
+      "contract": "c02_screenplay",
+      "created_at": "2026-09-05T14:00:00+08:00",
+      "producer": { "kind": "agent", "name": "screenwriter_agent", "agent_version": "0.1.0" },
+      "upstream_refs": ["brief.v1"],
+      "notes": "示例占位"
+    },
+    "payload": {
+      "scenes": [
+        {
+          "scene_id": "SC01",
+          "location": "射电望远镜阵列控制室",
+          "time_of_day": "night",
+          "summary": "夜班技师独自值守，例行的信号扫描在凌晨出现异常",
+          "characters": [
+            { "name": "技术员", "appearance": "四十岁上下，深色工装，短发花白" }
+          ],
+          "beats": [
+            { "order": 1, "action": "控制室空镜，屏幕阵列在黑暗中闪烁，机房低频嗡鸣", "dialogue": "", "emotion": "平静、压抑", "estimated_seconds": 6 },
+            { "order": 2, "action": "技术员靠在椅背上，机械表指针特写，他睁着眼", "dialogue": "", "emotion": "疲倦", "estimated_seconds": 6 },
+            { "order": 3, "action": "一台终端突然弹出未识别信号提示，蓝光打在他脸上", "dialogue": "", "emotion": "警觉", "estimated_seconds": 6 },
+            { "order": 4, "action": "他俯身核对频谱，手指停在确认键上方没有按下去", "dialogue": "（画外音）复核需要两个人。", "emotion": "犹豫", "estimated_seconds": 8 }
+          ]
+        }
+      ],
+      "emotion_curve": [
+        { "beat": "建立", "intensity": 0.2 },
+        { "beat": "打破", "intensity": 0.5 },
+        { "beat": "最低点", "intensity": 0.35 },
+        { "beat": "收束", "intensity": 0.7 }
+      ],
+      "dialogue_language": "zh",
+      "total_estimated_seconds": 150,
+      "gate": {
+        "required": true,
+        "status": "approved",
+        "reviewer": "总导演",
+        "reviewed_at": "2026-09-05T16:00:00+08:00",
+        "reason": "剧本确认——两处强制人工关口之一，已通过"
+      }
+    }
+  },
+
+  "c03_shotlist": {
+    "envelope": {
+      "schema_version": "1.0",
+      "artifact_id": "shotlist.v1",
+      "contract": "c03_shotlist",
+      "created_at": "2026-09-05T17:00:00+08:00",
+      "producer": { "kind": "agent", "name": "storyboard_agent", "agent_version": "0.1.0" },
+      "upstream_refs": ["screenplay.v1"],
+      "notes": "示例只列 3 个镜头，真实片子会有 20–30 个"
+    },
+    "payload": {
+      "shots": [
+        {
+          "shot_id": "S001",
+          "scene_id": "SC01",
+          "order": 1,
+          "duration_seconds": 6,
+          "aspect_ratio": "16:9 (Widescreen)",
+          "shot_size": "wide",
+          "camera_move": "push_in",
+          "visual_description": "黑暗控制室的全景，数十块屏幕泛着冷蓝辉光，无人，座椅空着",
+          "audio_description": "机房低频嗡鸣，远处偶有继电器轻响，无音乐",
+          "workflow_type": "T2V",
+          "needs_reference_assets": false,
+          "consistency_group": "control_room",
+          "reference_note": "",
+          "gate": { "required": false, "status": "not_required" }
+        },
+        {
+          "shot_id": "S002",
+          "scene_id": "SC01",
+          "order": 2,
+          "duration_seconds": 6,
+          "aspect_ratio": "16:9 (Widescreen)",
+          "shot_size": "close_up",
+          "camera_move": "static",
+          "visual_description": "技术员靠在椅背上，屏幕辉光从侧面打在脸上，左手腕的机械表在画面下缘",
+          "audio_description": "呼吸声被放大，嗡鸣压低，出现极轻的单音持续",
+          "workflow_type": "R2V",
+          "needs_reference_assets": true,
+          "consistency_group": "technician",
+          "reference_note": "需要主角正面定妆图 + 控制室场景参考图",
+          "gate": { "required": false, "status": "not_required" }
+        },
+        {
+          "shot_id": "S003",
+          "scene_id": "SC01",
+          "order": 3,
+          "duration_seconds": 6,
+          "aspect_ratio": "16:9 (Widescreen)",
+          "shot_size": "extreme_close_up",
+          "camera_move": "static",
+          "visual_description": "以 S002 定妆关键帧为首帧，终端弹出信号提示，蓝光骤亮，瞳孔收缩",
+          "audio_description": "尖锐提示音切入，嗡鸣瞬间消失",
+          "workflow_type": "I2V",
+          "needs_reference_assets": true,
+          "consistency_group": "technician",
+          "reference_note": "首帧取 S002 选中候选的一帧",
+          "gate": { "required": false, "status": "not_required" }
+        }
+      ],
+      "batch_plan": {
+        "fl2va_shots": ["S001", "S003"],
+        "ref2va_shots": ["S002"],
+        "candidates_per_shot": 3
+      }
+    }
+  },
+
+  "c04_gen_request": {
+    "envelope": {
+      "schema_version": "1.0",
+      "artifact_id": "genreq.S001_c01",
+      "contract": "c04_gen_request",
+      "created_at": "2026-09-06T09:00:00+08:00",
+      "producer": { "kind": "agent", "name": "prompt_agent", "agent_version": "0.1.0" },
+      "upstream_refs": ["shotlist.v1"],
+      "notes": "示例：T2V 镜头，无参考素材"
+    },
+    "payload": {
+      "shot_id": "S001",
+      "candidate_id": "S001_c01",
+      "retry_of": null,
+      "workflow": {
+        "type": "T2V",
+        "api_json": "workflow_api_t2v.json",
+        "node_ids": {
+          "source": "workflows/node_id_map.json@a1b2c3d",
+          "prompt": ["140:131", "prompt"],
+          "seed": ["140:129", "noise_seed"],
+          "duration_seconds": ["140:133", "value"],
+          "aspect_ratio": ["115", "aspect_ratio"],
+          "megapixels": ["115", "megapixels"],
+          "filename_prefix": ["92", "filename_prefix"],
+          "fps": ["140:130", "fps"],
+          "turbo_enabled": ["140:139", "value"],
+          "steps_normal": ["140:137", "value"],
+          "steps_turbo": ["140:138", "value"]
+        },
+        "turbo_enabled": false
+      },
+      "generation": {
+        "prompt": "Realistic live-action cinematic look. [0s-3s] Wide establishing shot of an empty radio telescope array control room at night, dozens of monitors glowing cold blue in near-total darkness, an empty chair in the center, dust visible in the screen light. [3s-6s] Slow deliberate push-in toward the main console, relay indicator lights blinking sparsely, no people in frame. Audio: deep low-frequency machine room hum, occasional distant relay click, no music.",
+        "prompt_language": "en",
+        "timecodes": ["[0s-3s]", "[3s-6s]"],
+        "duration_seconds": 6,
+        "seed": 1001,
+        "aspect_ratio": "16:9 (Widescreen)",
+        "megapixels": 0.4,
+        "multiple": 32,
+        "fps": 24,
+        "bit_depth": 8,
+        "color_space": "sRGB",
+        "steps": 20,
+        "sampler_name": "res_multistep",
+        "scheduler": "simple",
+        "filename_prefix": "shots/S001_c01"
+      },
+      "assets": {}
+    }
+  },
+
+  "c05_gen_result": {
+    "envelope": {
+      "schema_version": "1.0",
+      "artifact_id": "genres.S001_c01",
+      "contract": "c05_gen_result",
+      "created_at": "2026-09-06T09:14:00+08:00",
+      "producer": { "kind": "agent", "name": "generation_agent", "agent_version": "0.1.0" },
+      "upstream_refs": ["genreq.S001_c01"],
+      "notes": "示例数据，sha256 与耗时均为占位"
+    },
+    "payload": {
+      "shot_id": "S001",
+      "candidate_id": "S001_c01",
+      "comfy_prompt_id": "3f9c1a2e-0000-0000-0000-000000000000",
+      "output": {
+        "path": "shots/S001/c01/video.mp4",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size_bytes": 4823000
+      },
+      "ffprobe": {
+        "duration_seconds": 6.083,
+        "video_stream": {
+          "codec_name": "h264",
+          "width": 848,
+          "height": 480,
+          "avg_frame_rate": "24/1",
+          "pix_fmt": "yuv420p"
+        },
+        "audio_stream": {
+          "codec_name": "aac",
+          "sample_rate": "32000",
+          "channels": 2
+        }
+      },
+      "timing": {
+        "submitted_at": "2026-09-06T09:05:00+08:00",
+        "finished_at": "2026-09-06T09:14:00+08:00",
+        "elapsed_seconds": 540,
+        "queue_position_at_submit": 0
+      },
+      "params_snapshot": {
+        "prompt": "Realistic live-action cinematic look. [0s-3s] Wide establishing shot of an empty radio telescope array control room at night...",
+        "seed": 1001,
+        "duration_seconds": 6,
+        "frame_count_actual": 141,
+        "megapixels": 0.4,
+        "width": 848,
+        "height": 480,
+        "steps": 20,
+        "turbo_enabled": false,
+        "filename_prefix": "shots/S001_c01"
+      },
+      "model_files": {
+        "unet_name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+        "weight_dtype": "default",
+        "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+        "clip_type": "minimax",
+        "video_vae_name": "minimax_h3_video_vae_fp16.safetensors",
+        "audio_vae_name": "minimax_h3_audio_vae_fp32.safetensors",
+        "lora_name": null
+      },
+      "submitted_by": "组员A"
+    }
+  },
+
+  "c06_qc_report": {
+    "envelope": {
+      "schema_version": "1.0",
+      "artifact_id": "qc.S001_c01",
+      "contract": "c06_qc_report",
+      "created_at": "2026-09-06T09:30:00+08:00",
+      "producer": { "kind": "agent", "name": "qc_agent", "agent_version": "0.1.0" },
+      "upstream_refs": ["genres.S001_c01"],
+      "notes": "示例：一个通过、一个失败的写法都在下面（checks 里 fps 项演示 fail 长什么样）"
+    },
+    "payload": {
+      "shot_id": "S001",
+      "candidate_id": "S001_c01",
+      "verdict": "pass_with_notes",
+      "score": 7.5,
+      "checks": [
+        { "name": "duration_in_range", "status": "pass", "detail": "6.083s，落在 4–8s 目标区间", "measured": "6.083" },
+        { "name": "fps_is_24", "status": "pass", "detail": "", "measured": "24/1" },
+        { "name": "has_video_stream", "status": "pass", "measured": "h264 848x480" },
+        { "name": "has_audio_stream", "status": "pass", "measured": "aac" },
+        { "name": "audio_32k_stereo", "status": "pass", "detail": "符合 H3 标称", "measured": "32000Hz 2ch" },
+        { "name": "resolution_matches_aspect_ratio", "status": "pass", "detail": "848x480 约 16:9，megapixels=0.4 的预期值", "measured": "848x480" },
+        { "name": "prompt_adherence", "status": "pass", "detail": "空镜、冷蓝辉光、推镜均到位" },
+        { "name": "scene_consistency", "status": "pass", "detail": "与 control_room 组一致" },
+        { "name": "motion_quality", "status": "pass", "detail": "推镜平滑无抖动" },
+        { "name": "audio_matches_scene", "status": "pass", "detail": "低频嗡鸣存在" },
+        { "name": "no_visual_artifact", "status": "fail", "detail": "第 4 秒右下角屏幕出现轻微纹理撕裂，可接受但记录在案", "measured": "t=4.0s 右下角" },
+        { "name": "no_red_line_violation", "status": "pass", "detail": "逐条比对 brief.red_lines 无命中" }
+      ],
+      "failed_items": ["no_visual_artifact"],
+      "root_cause": "megapixels=0.4 分辨率偏低导致细小屏幕纹理不稳定，属预期范围",
+      "suggested_change": {
+        "action": "raise_megapixels",
+        "patch": { "megapixels": 1.0 },
+        "rationale": "成片批次统一提到 1.0，试错阶段保持 0.4 不动"
+      },
+      "retry_count": 0,
+      "max_retries": 3,
+      "route_to": "edit",
+      "gate": { "required": false, "status": "not_required" }
+    }
+  },
+
+  "c07_edit_decision": {
+    "envelope": {
+      "schema_version": "1.0",
+      "artifact_id": "edit.roughcut.v1",
+      "contract": "c07_edit_decision",
+      "created_at": "2026-09-11T20:00:00+08:00",
+      "producer": { "kind": "agent", "name": "editing_agent", "agent_version": "0.1.0" },
+      "upstream_refs": ["qc.S001_c01"],
+      "notes": "示例只列 3 条时间线，真实成片 20–30 条"
+    },
+    "payload": {
+      "timeline": [
+        {
+          "order": 1,
+          "shot_id": "S001",
+          "candidate_id": "S001_c01",
+          "source_path": "shots/S001/c01/video.mp4",
+          "in_point_seconds": 0,
+          "out_point_seconds": 6,
+          "transition": "fade_in",
+          "subtitle": null
+        },
+        {
+          "order": 2,
+          "shot_id": "S002",
+          "candidate_id": "S002_c02",
+          "source_path": "shots/S002/c02/video.mp4",
+          "in_point_seconds": 0.5,
+          "out_point_seconds": 6,
+          "transition": "cut",
+          "subtitle": null
+        },
+        {
+          "order": 3,
+          "shot_id": "S003",
+          "candidate_id": "S003_c01",
+          "source_path": "shots/S003/c01/video.mp4",
+          "in_point_seconds": 0,
+          "out_point_seconds": 5.5,
+          "transition": "cut",
+          "subtitle": "复核需要两个人。"
+        }
+      ],
+      "audio_mix": {
+        "dialogue_gain_db": 0,
+        "music_gain_db": -6,
+        "sfx_gain_db": -3,
+        "loudness_target_lufs": -14,
+        "measured_loudness_lufs": -14.2
+      },
+      "final_output": {
+        "path": "deliverables/final_v1.mp4",
+        "container": "mp4",
+        "duration_seconds": 152,
+        "resolution": "1344x768",
+        "fps": 24,
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "size_bytes": 184000000
+      },
+      "compliance": {
+        "ai_label_present": true,
+        "ai_label_position": "opening_and_ending",
+        "red_line_self_check": true,
+        "duration_in_range": true,
+        "size_under_limit": true,
+        "asset_licenses_cleared": true,
+        "evidence_paths": [
+          "docs/compliance/ai_label_screenshot.png",
+          "docs/compliance/ffprobe_final.txt",
+          "docs/compliance/red_line_checklist.md"
+        ]
+      },
+      "deliverables": {
+        "platform_url": "",
+        "studio_url": "",
+        "blog_url": "",
+        "upload_file_path": "deliverables/final_v1.mp4"
+      },
+      "gate": {
+        "required": true,
+        "status": "pending",
+        "reviewer": null,
+        "reviewed_at": null,
+        "reason": "粗剪确认——两处强制人工关口之二，待全组看过粗剪后填写"
+      }
+    }
+  }
+}

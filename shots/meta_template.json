@@ -1,0 +1,70 @@
+{
+  "envelope": {
+    "schema_version": "1.0",
+    "artifact_id": "genres.S001_c00",
+    "contract": "c05_gen_result",
+    "created_at": "2026-09-06T09:14:00+08:00",
+    "producer": {
+      "kind": "agent",
+      "name": "generation_agent",
+      "agent_version": "0.1.0"
+    },
+    "upstream_refs": [
+      "genreq.S001_c00"
+    ],
+    "notes": "模板文件。所有占位值都符合契约格式，因此本文件可以直接通过校验；实际使用时必须替换"
+  },
+  "payload": {
+    "shot_id": "S001",
+    "candidate_id": "S001_c00",
+    "comfy_prompt_id": "00000000-0000-0000-0000-000000000000",
+    "output": {
+      "path": "shots/S001_c00/video.mp4",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "size_bytes": 1
+    },
+    "ffprobe": {
+      "duration_seconds": 5.0,
+      "video_stream": {
+        "codec_name": "h264",
+        "width": 848,
+        "height": 480,
+        "avg_frame_rate": "24/1",
+        "pix_fmt": "yuv420p"
+      },
+      "audio_stream": {
+        "codec_name": "aac",
+        "sample_rate": "32000",
+        "channels": 2
+      }
+    },
+    "timing": {
+      "submitted_at": "2026-09-06T09:05:00+08:00",
+      "finished_at": "2026-09-06T09:08:30+08:00",
+      "elapsed_seconds": 210.0,
+      "queue_position_at_submit": 0
+    },
+    "params_snapshot": {
+      "prompt": "REPLACE ME - 实际提交给 ComfyUI 的英文提示词，含 [0s-3s] 形式的时间码",
+      "seed": 20260906,
+      "duration_seconds": 5.0,
+      "frame_count_actual": 124,
+      "megapixels": 0.4,
+      "width": 848,
+      "height": 480,
+      "steps": 20,
+      "turbo_enabled": false,
+      "filename_prefix": "shots/S001_c00"
+    },
+    "model_files": {
+      "unet_name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default",
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "clip_type": "minimax",
+      "video_vae_name": "minimax_h3_video_vae_fp16.safetensors",
+      "audio_vae_name": "minimax_h3_audio_vae_fp32.safetensors",
+      "lora_name": null
+    },
+    "submitted_by": "REPLACE ME - A / B / C"
+  }
+}
