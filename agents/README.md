@@ -32,20 +32,7 @@
 
 ---
 
-## 二、归属
-
-| 人 | owns | 产出契约 | 独占职责 |
-|---|---|---|---|
-| **A · 总导演** | ①编剧、⑦剪辑 | `c01`、`c02`、`c07` | 全部人工关口的裁决、质检标准定义、合规自查、创作手记、最终提交、仓库 owner |
-| **B · 生成与复现** | ④生成、⑥重试 | 消费 `c04`、产出 `c05` | ComfyUI API 接入、GPU 排队、`meta.json` 与环境快照、素材上传、仓库工程化 |
-| **C · 中间层 + 部署** | ②分镜、③提示词、⑤质检 | `c03`、`c04`、`c06` | 视觉一致性资产与 R2V 参考集、GPU 排班表与 `docs/task_registry.md` 维护、创空间部署 |
-
-**人工关口必须集中在 A 一个人手里。** 关口是「阻塞等待」，
-如果三个人都能批，那就不叫关口。
-
----
-
-## 三、人工关口是数据，不是口头约定
+## 二、人工关口是数据，不是口头约定
 
 机器强制的阻塞关口有**两处**：
 
@@ -67,7 +54,7 @@ python contracts/validate_contract.py --contract c02_screenplay --file artifacts
 
 ---
 
-## 四、开发顺序：先 mock，不要等上游
+## 三、开发顺序：先 mock，不要等上游
 
 契约冻结后，三个人可以真正并行，因为每个人的输入输出都能从
 `contracts/examples.json` 里拿到假数据：
@@ -90,7 +77,7 @@ python contracts/validate_contract.py --contract c02_screenplay --file artifacts
 
 ---
 
-## 五、LLM 放在哪里
+## 四、LLM 放在哪里
 
 **节点上没有文本模型**（实测各加载器的枚举可选值里只有 MiniMax-H3 的
 视频权重、文本编码器与 VAE，详见 `docs/node_baseline.md` 第四节）。
@@ -103,28 +90,3 @@ python contracts/validate_contract.py --contract c02_screenplay --file artifacts
 **不要用 LLM 判这些**——能确定性判定的事不要交给概率模型。
 主观部分（提示词遵循度、画面崩坏）才用 LLM 或人。
 
----
-
-## 六、目录约定
-
-各 owner 建自己的子目录：
-
-```
-agents/
-  screenwriter/     ①  A
-  storyboard/       ②  C
-  prompter/         ③  C
-  generator/        ④  B
-  qc/               ⑤  C
-  retry/            ⑥  B
-  editor/           ⑦  A
-```
-
-三条硬性要求：
-
-1. **节点 ID 一律从 `workflows/node_id_map.json` 读**，不许在代码里硬编码
-   `"140:131"` 这类字符串。T2V / I2V 的 ID 是子图摊平后的复合编号，
-   ComfyUI 升级或重导模板就会变
-2. **交接物落盘为 JSON 并过校验器**，不要靠聊天窗口传参数
-3. **不要把素材、视频、权重写进仓库**。产物目录已被 `.gitignore` 排除，
-   只允许 `meta.json` / `selected.txt` / `ffprobe.txt` 入库，见 `shots/README.md`
