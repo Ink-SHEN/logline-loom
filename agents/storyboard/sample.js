@@ -1,9 +1,185 @@
-// agents/storyboard/sample.js — 「分镜」离线降级示例产物。
-// 当 Qoder SDK / 鉴权不可用时使用；同时是分镜输出 JSON 格式的「活文档」。
-export const sampleStoryboard = `{
-  "shots": [
-    { "id": 1, "frame": 1, "shotType": "大远景 · 缓推", "visual": "沉睡的空中都市，漆黑、寂静，雾气缓缓流动", "caption": "它已经很久没有醒来。", "sfx": "低频风声", "seconds": 4 },
-    { "id": 2, "frame": 2, "shotType": "特写 · 固定", "visual": "戴手套的手握住总闸，缓缓向下合闸", "caption": "直到有人按下那个开关。", "sfx": "金属合闸 · 电流起", "seconds": 4 },
-    { "id": 3, "frame": 3, "shotType": "大远景 · 升镜头", "visual": "城市骤然亮起，金光自塔楼间涌出，航道流光穿梭", "caption": "于是，整座城重新发光。", "sfx": "能量涌动渐强 → 定音", "seconds": 5 }
-  ]
+// agents/storyboard/sample.js — 「②分镜」离线降级示例产物。
+// LLM / 鉴权不可用时 runStoryboard 返回它，保证流水线照常出片；
+// 它同时是 c03_shotlist 输出形状的「活文档」，与 prompt.js 的模板逐字段一致。
+// 内容与 screenwriter/sample.js 的《启明 / First Light》三场十拍一一对应（10 beat → 10 镜头，共 66 秒），
+// 三种 workflow_type 都有示范：T2V 空镜、R2V 角色镜头、I2V 首帧衔接。
+export const sampleShotList = `{
+  "envelope": {
+    "schema_version": "1.0",
+    "artifact_id": "shotlist.sample.v1",
+    "contract": "c03_shotlist",
+    "created_at": "2026-09-06T18:00:00+08:00",
+    "producer": { "kind": "agent", "name": "storyboard_agent", "agent_version": "0.2.0" },
+    "upstream_refs": ["screenplay.sample.v1"],
+    "notes": "离线降级示例：LLM 不可用时返回，形状即 c03_shotlist 契约"
+  },
+  "payload": {
+    "shots": [
+      {
+        "shot_id": "S001",
+        "scene_id": "SC01",
+        "order": 1,
+        "duration_seconds": 6,
+        "aspect_ratio": "16:9 (Widescreen)",
+        "shot_size": "extreme_wide",
+        "camera_move": "static",
+        "visual_description": "大远景：夜色中空中巨城呈漆黑剪影，摩天楼无灯，冷蓝雾气在塔楼间缓缓流动",
+        "audio_description": "低频风声铺底，远处极稀疏的电流微鸣，无音乐无对白",
+        "workflow_type": "T2V",
+        "needs_reference_assets": false,
+        "consistency_group": "city_skyline",
+        "reference_note": "",
+        "gate": { "required": false, "status": "not_required" }
+      },
+      {
+        "shot_id": "S002",
+        "scene_id": "SC01",
+        "order": 2,
+        "duration_seconds": 6,
+        "aspect_ratio": "16:9 (Widescreen)",
+        "shot_size": "extreme_wide",
+        "camera_move": "tracking",
+        "visual_description": "雾中空荡的空中航道，没有任何飞行器，只有航标灯一盏接一盏明灭，远处城市轮廓漆黑",
+        "audio_description": "风声压低，航标灯明灭的滴答声清晰可辨，仍无音乐",
+        "workflow_type": "T2V",
+        "needs_reference_assets": false,
+        "consistency_group": "city_skyline",
+        "reference_note": "",
+        "gate": { "required": false, "status": "not_required" }
+      },
+      {
+        "shot_id": "S003",
+        "scene_id": "SC01",
+        "order": 3,
+        "duration_seconds": 7,
+        "aspect_ratio": "16:9 (Widescreen)",
+        "shot_size": "wide",
+        "camera_move": "push_in",
+        "visual_description": "镜头穿过冷蓝雾气缓缓推向城市中枢那一点琥珀色光，那是全画面唯一亮处，光晕微微搏动",
+        "audio_description": "极轻的单音持续渐入，画外音低语：它已经很久没有醒来。",
+        "workflow_type": "T2V",
+        "needs_reference_assets": false,
+        "consistency_group": "city_skyline",
+        "reference_note": "",
+        "gate": { "required": false, "status": "not_required" }
+      },
+      {
+        "shot_id": "S004",
+        "scene_id": "SC02",
+        "order": 4,
+        "duration_seconds": 6,
+        "aspect_ratio": "16:9 (Widescreen)",
+        "shot_size": "medium",
+        "camera_move": "tracking",
+        "visual_description": "昏暗控制室内，深色工装的值守者从一排静止的仪表间走过，指针全部停摆，琥珀色指示灯照亮他的侧脸",
+        "audio_description": "脚步声在控制室里回响，仪器低频嗡鸣铺底，无音乐",
+        "workflow_type": "R2V",
+        "needs_reference_assets": true,
+        "consistency_group": "watchman",
+        "reference_note": "需值守者正面定妆图 + 控制室场景参考图（R2V 参考集，watchman 组内复用）",
+        "gate": { "required": false, "status": "not_required" }
+      },
+      {
+        "shot_id": "S005",
+        "scene_id": "SC02",
+        "order": 5,
+        "duration_seconds": 6,
+        "aspect_ratio": "16:9 (Widescreen)",
+        "shot_size": "close_up",
+        "camera_move": "static",
+        "visual_description": "特写：戴绝缘手套的手握住巨大的总闸手柄，指节缓缓收紧，金属表面映着琥珀色光",
+        "audio_description": "手套皮革与金属手柄的轻微摩擦声，呼吸渐重，嗡鸣压低",
+        "workflow_type": "R2V",
+        "needs_reference_assets": true,
+        "consistency_group": "watchman",
+        "reference_note": "复用 watchman 组定妆参考集，画面只需手套、手柄与工装袖口",
+        "gate": { "required": false, "status": "not_required" }
+      },
+      {
+        "shot_id": "S006",
+        "scene_id": "SC02",
+        "order": 6,
+        "duration_seconds": 7,
+        "aspect_ratio": "16:9 (Widescreen)",
+        "shot_size": "close_up",
+        "camera_move": "push_in",
+        "visual_description": "特写：值守者的脸被琥珀色指示灯照亮，灯闪烁三下后定格，他闭眼深吸一口气",
+        "audio_description": "指示灯闪烁的嗒嗒声清晰可闻，随后一次深长呼吸，画外音低语：直到有人合上那个开关。",
+        "workflow_type": "R2V",
+        "needs_reference_assets": true,
+        "consistency_group": "watchman",
+        "reference_note": "复用 watchman 组定妆参考集，重点锁面部与琥珀色光效",
+        "gate": { "required": false, "status": "not_required" }
+      },
+      {
+        "shot_id": "S007",
+        "scene_id": "SC02",
+        "order": 7,
+        "duration_seconds": 8,
+        "aspect_ratio": "16:9 (Widescreen)",
+        "shot_size": "extreme_close_up",
+        "camera_move": "tilt_up",
+        "visual_description": "大特写：手柄被果断压下、机械咬合，镜头沿导管上摇，电流奔涌而上，指示灯逐一亮起",
+        "audio_description": "沉重的机械合闸声，电流沿导管奔涌的低吼，指示灯逐一亮起的清脆提示音，节奏骤起",
+        "workflow_type": "I2V",
+        "needs_reference_assets": true,
+        "consistency_group": "watchman",
+        "reference_note": "首帧取 S006 选中候选的定格帧，保证合闸前光影与机位衔接",
+        "gate": { "required": false, "status": "not_required" }
+      },
+      {
+        "shot_id": "S008",
+        "scene_id": "SC03",
+        "order": 8,
+        "duration_seconds": 5,
+        "aspect_ratio": "16:9 (Widescreen)",
+        "shot_size": "wide",
+        "camera_move": "static",
+        "visual_description": "能量从中枢塔尖以可见的光波形式涌出，漆黑的楼面自下而上逐层亮起，冷蓝雾气被金光穿透",
+        "audio_description": "能量涌动的轰鸣自塔尖炸开，低音弦乐首次进入",
+        "workflow_type": "T2V",
+        "needs_reference_assets": false,
+        "consistency_group": "city_skyline",
+        "reference_note": "",
+        "gate": { "required": false, "status": "not_required" }
+      },
+      {
+        "shot_id": "S009",
+        "scene_id": "SC03",
+        "order": 9,
+        "duration_seconds": 7,
+        "aspect_ratio": "16:9 (Widescreen)",
+        "shot_size": "extreme_wide",
+        "camera_move": "pull_out",
+        "visual_description": "大远景：万家灯火由冷蓝转为暖金，雾气被染成暖色，镜头缓缓后拉，城市如星海般铺开",
+        "audio_description": "弦乐渐强，城市嗡鸣由冷转暖，出现层层叠叠的光音",
+        "workflow_type": "T2V",
+        "needs_reference_assets": false,
+        "consistency_group": "city_skyline",
+        "reference_note": "",
+        "gate": { "required": false, "status": "not_required" }
+      },
+      {
+        "shot_id": "S010",
+        "scene_id": "SC03",
+        "order": 10,
+        "duration_seconds": 8,
+        "aspect_ratio": "16:9 (Widescreen)",
+        "shot_size": "extreme_wide",
+        "camera_move": "crane",
+        "visual_description": "航道流光穿梭夜空，镜头缓缓拉升，发光的城市全貌尽收眼底，暖金光晕溢出画面",
+        "audio_description": "音乐推到顶点后缓缓回落，流光穿梭带起轻微风鸣，画外音：于是，整座城重新发光。",
+        "workflow_type": "T2V",
+        "needs_reference_assets": false,
+        "consistency_group": "city_skyline",
+        "reference_note": "",
+        "gate": { "required": false, "status": "not_required" }
+      }
+    ],
+    "batch_plan": {
+      "fl2va_shots": ["S001", "S002", "S003", "S007", "S008", "S009", "S010"],
+      "ref2va_shots": ["S004", "S005", "S006"],
+      "candidates_per_shot": 3
+    }
+  }
 }`;
