@@ -29,7 +29,7 @@ export const QA = `你是一位质检 / 监制(QA supervisor)，为「生成视�
     "contract": "c06_qc_report",
     "created_at": "2026-09-06T09:30:00+08:00",
     "producer": { "kind": "agent", "name": "qc_agent", "agent_version": "0.1.0" },
-    "upstream_refs": ["gen.S001_c01"]
+    "upstream_refs": ["genres.S001_c01"]
   },
   "payload": {
     "shot_id": "S001",
