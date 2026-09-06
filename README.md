@@ -71,7 +71,8 @@ LOOM 的做法是把这条流水线拆成 **7 个各有明确输入输出的 Age
 |---|---|
 | `contracts/` | **7 道接口契约**（JSON Schema draft 2020-12）+ 示例产物 + 校验器 + 反向测试 |
 | `workflows/` | ComfyUI **API 格式**工作流三份（T2V / I2V / R2V）+ 节点 ID 映射表 + 两个校验脚本 |
-| `agents/` | 7 个 Agent 的实现，按角色分子目录（见 `agents/README.md` 的边界与归属） |
+| `agents/` | 7 个 Agent 的实现，**一个 Agent 一个文件夹**（`prompt.js` / `sample.js` / `index.js`）。见 `agents/README.md` 的边界、归属与当前差距 |
+| `docs/agent_guide.md` | **Agent 开发指南**：照着哪几个文件写、输出形状的五条铁律、提交前的自检命令 |
 | `docs/decisions/` | 决策记录。每条决定连同它的依据与当时的已知信息一起存档 |
 | `docs/gpu_protocol.md` | GPU 排队协议与**实测性能基线** |
 | `docs/node_baseline.md` | 节点环境快照（复现用） |
