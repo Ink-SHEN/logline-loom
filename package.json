@@ -1,0 +1,11 @@
+{
+  "name": "loom-film-agents",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "LOOM 电影 Agent 流水线。agents/ 下全部为 ESM；本文件解除 docs/agent_guide.md 第十节记录的『.js export 语法错』阻塞项",
+  "scripts": {
+    "screenwriter": "node agents/screenwriter/run.js",
+    "validate": "python contracts/validate_contract.py --selftest"
+  }
+}
