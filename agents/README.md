@@ -111,7 +111,7 @@ export const meta = {
 | ④ | 生成 | `agents/generator/` | ⬜ 待建 |
 | ⑤ | 质检 | `agents/qa/` | ✅ 初稿已入库（**不合规，且审查对象错位**） |
 | ⑥ | 重试 | `agents/retry/` | ⬜ 待建 |
-| ⑦ | 剪辑 | `agents/editor/` | ⬜ 待建 |
+| ⑦ | 剪辑 | `agents/editor/` | ✅ 初稿已入库（输出对齐 c07_edit_decision 并过校验，接入 LLM API，附 run.js 管线；消费 c06(pass)+c05(取 source_path)+c03(取顺序)，字幕走侧清单 sample_subtitles.json，见 docs/decisions/2026-09-07-editor-input-conventions.md） |
 
 另需入库（不属于 `agents/`，但没有它们整条链路跑不起来）：
 

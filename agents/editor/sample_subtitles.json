@@ -1,0 +1,40 @@
+{
+  "_说明": [
+    "「⑦剪辑」的字幕清单（人工撰写，不是契约的一部分）——剪辑 Agent 的侧输入文件，",
+    "与 agents/prompt-writer/sample_assets.json 同一处理方式：格式自由、不进 Schema，但缺了会静默丢东西，所以开工前逐条校验。",
+    "",
+    "用法：node agents/editor/run.js --subtitles <本文件>",
+    "键 = shot_id（^S[0-9]{3}$）；值 = 字符串（整镜一条字幕）或数组（多行，逐条给时刻）。",
+    "以 _ 开头的键是注释，剪辑 Agent 读取时跳过。",
+    "清单里没出现的 shot → c07 的 timeline[].subtitle = null，即该镜无字幕。",
+    "",
+    "at_seconds / until_seconds 一律是**源视频时间**（该候选 mp4 自己的时间轴，0 = 这一条素材的第一帧），",
+    "不是成片时间轴。剪辑 Agent 按 timeline[].in_point_seconds 平移后写进 .ass。",
+    "写在这里的理由：人对着一句话写时间，对的是镜头素材，不是全片；换候选、改剪辑点都不必重标字幕。",
+    "until_seconds 可省略，默认到下一条的 at_seconds，最后一条到该镜 out_point_seconds。",
+    "",
+    "落回 c07：契约的 timeline[].subtitle 只有一个字符串，装不下逐行时序。",
+    "所以该 shot 的多行文本按行用 \\n 连接进 c07（作为「这一镜挂了哪些字」的记录），",
+    "精确逐行时序落在渲染出的 subtitles.ass，其路径进 compliance.evidence_paths。"
+  ],
+
+  "_默认": {
+    "font": "Noto Sans CJK SC",
+    "font_size_px": 40,
+    "margin_bottom_px": 60,
+    "max_chars_per_line": 18,
+    "_说明": "渲染字幕用的样式，剪辑 Agent 据此生成 .ass。max_chars_per_line 超出只警告不阻塞——烧出来会顶到画面边。"
+  },
+
+  "S003": "复核需要两个人。",
+
+  "S007": [
+    { "at_seconds": 0.0, "text": "第一批播种，成功。" },
+    { "at_seconds": 2.4, "text": "第二批——失败。", "until_seconds": 5.0 },
+    { "at_seconds": 5.2, "text": "那就再来一次。" }
+  ],
+
+  "S012": [
+    { "at_seconds": 1.0, "text": "它没有拒绝执行。", "note": "画外音，画面里没人开口" }
+  ]
+}
