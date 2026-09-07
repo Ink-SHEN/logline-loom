@@ -158,6 +158,20 @@ print(urllib.request.urlopen(req).read().decode())       # 返回 prompt_id
 
 之后 `GET /history/<prompt_id>` 取结果，`GET /queue` 看排队状态。
 
+裸 POST 只适合手动验证「这个节点通不通」。**跑正式镜头用 ④生成 Agent**，
+它把整条都接管了：查节点 ID → 按 `c04_gen_request` 填图 → 上传参考素材 → POST → 轮询 `/history`
+→ 下载产物 → 落盘 `shots/<候选>/`（`video.mp4` + `ffprobe.txt` + `meta.json`）→ 写出 `c05_gen_result`：
+
+```bash
+node agents/generator/run.js --requests artifacts/genreq_<时间戳>/ --dry-run   # 只出提交计划，不 POST、不烧 GPU
+node agents/generator/run.js --requests artifacts/genreq_<时间戳>/             # 真跑
+```
+
+节点地址来自 `--endpoint` 或环境变量 `LOOM_COMFY_URL`，都没给就是回环地址 `http://127.0.0.1:8188`
+（`.gitignore` 里预留了 `comfy_endpoint.txt` 这个放地址的位置，要用就自己从里面导出环境变量，代码不读它）。
+**ComfyUI 完全没有鉴权**，地址与任何 token 都不入库，只能用 `--listen 127.0.0.1` + SSH 隧道访问，见第七节限制 7。
+七站怎么逐站手接见 [`agents/README.md`](agents/README.md) 第九节。
+
 ## 六、实测性能基线
 
 来自 ComfyUI `/history` 的 `execution_start` / `execution_success` 时间戳，`megapixels=0.4`（16:9 约 848×480）：

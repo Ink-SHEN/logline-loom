@@ -1,0 +1,90 @@
+{
+  "_说明": [
+    "「⑤质检」的主观项复核侧清单（人工填写，或外部视觉模型出片后填，不是契约的一部分）——",
+    "质检 Agent 的侧输入文件，与 agents/prompt-writer/sample_assets.json、agents/editor/sample_subtitles.json",
+    "同一处理方式：格式自由、不进 Schema，但缺了会静默丢东西，所以开工前逐条校验。",
+    "",
+    "用法：node agents/qa/run.js --candidates S001_c01 --review <本文件>",
+    "键 = candidate_id（^S[0-9]{3}_c[0-9]{2}$）。以 _ 开头的键是注释，质检 Agent 读取时跳过。",
+    "清单里没出现的候选 → 它的主观项记 skipped（未复核），再由 --on-unreviewed human|edit 决定分流。",
+    "",
+    "为什么要有这个文件：13 项检查里 6 项客观项由 ffprobe + 代码硬判，剩下 7 项主观项必须有人真看过画面。",
+    "默认接的 Qwen2.5-72B-Instruct 是纯文本模型，它没看过画面，让它判 prompt_adherence 等于让它编，",
+    "而编出来的 pass 会被下游当成证据、比 skipped 危险得多。所以主观项只有三个合法来源，优先级从高到低：",
+    "  1. 本文件（--review）：人看过，或外部视觉模型看过之后把结论填进来",
+    "  2. --vision：质检 Agent 自己用 ffmpeg 抽帧 + 视觉模型（LOOM_LLM_VISION_MODEL）判",
+    "  3. 都没有 → skipped，走 --on-unreviewed（默认 human，即契约说的「判不了的走 human」）",
+    "",
+    "本文件里只写主观项。客观项（duration_in_range / fps_is_24 / has_video_stream / has_audio_stream /",
+    "audio_32k_stereo / resolution_matches_aspect_ratio）写了也会被忽略并告警——那 6 项有实测值，",
+    "人工结论不能覆盖仪器读数；要推翻实测值请先去看 shots/<候选>/ffprobe.txt 原文。"
+  ],
+
+  "_字段口径": {
+    "reviewer": "谁看的。会进 c06 的 envelope.notes，是可追溯链的一部分",
+    "reviewed_at": "什么时候看的，date-time。可省略",
+    "findings": "数组，每条 { name, status, detail?, measured? }。name 只能是 7 项主观项之一；status 只能是 pass / fail",
+    "detail": "要可执行：哪一秒、画面哪个位置、什么东西不对。不要写「质量不佳」",
+    "measured": "据以判断的具体观察，例如 \"t=4.0s 右下角\"。没有可量化观察就省略",
+    "score": "0–10 一位小数，多候选排序用，是参考不是决定。可省略",
+    "root_cause": "失败归因，会被直接抄进创作手记的「失败与修正」章节。全通过时写 null 或省略",
+    "_说明": "findings 里缺的主观项仍记 skipped（未复核），不会因为给了这个文件就默认全过",
+    "_无可比对象时": "空镜没有人物、T2V 没有参考图，character_consistency 就没有可比对象。这种情况写 pass 并在 detail 里写明「无可比对象」，不要整条省略——省略会被记成 skipped（未复核）再按 --on-unreviewed 分流，把「看过，无从比起」误报成「没人看过」。"
+  },
+
+  "S001_c01": {
+    "reviewer": "组员A",
+    "reviewed_at": "2026-09-08T10:20:00+08:00",
+    "findings": [
+      {
+        "name": "prompt_adherence",
+        "status": "pass",
+        "detail": "空镜、冷蓝辉光、缓慢推镜三项均与提示词一致；[3s-6s] 段的琥珀色待机灯确实出现在中央控制台",
+        "measured": "全片"
+      },
+      {
+        "name": "character_consistency",
+        "status": "pass",
+        "detail": "无可比对象：本镜是空镜，T2V 也没挂参考图。已确认画面里没有多出提示词未要求的人物——空镜里冒出一张脸是最容易穿帮的地方",
+        "measured": "全片"
+      },
+      { "name": "scene_consistency", "status": "pass", "detail": "与 control_room 组其余镜头色调一致，光源方向同为左后侧" },
+      { "name": "motion_quality", "status": "pass", "detail": "推镜平滑无抖动，无物体形变" },
+      { "name": "audio_matches_scene", "status": "pass", "detail": "低频电气嗡鸣与远处风扇声存在，无人声，与空镜设定相符" },
+      {
+        "name": "no_visual_artifact",
+        "status": "fail",
+        "detail": "第 4 秒右下角监控屏幕出现轻微纹理撕裂，边缘有 2–3 像素横向错位；其余时间画面干净",
+        "measured": "t=4.0s 右下角"
+      },
+      { "name": "no_red_line_violation", "status": "pass", "detail": "逐条比对片约 red_lines 无命中" }
+    ],
+    "score": 7.5,
+    "root_cause": "megapixels=0.4 分辨率偏低导致细小屏幕纹理不稳定，属预期范围"
+  },
+
+  "S002_c01": {
+    "reviewer": "组员A",
+    "reviewed_at": "2026-09-08T10:35:00+08:00",
+    "findings": [
+      {
+        "name": "prompt_adherence",
+        "status": "fail",
+        "detail": "提示词要求「手合闸特写、static locked-off camera」，实际输出是远景房间全景，主体手只占画面约 1/12；机位也没锁住，有轻微漂移",
+        "measured": "全片构图"
+      },
+      {
+        "name": "character_consistency",
+        "status": "pass",
+        "detail": "无可比对象：T2V 没挂参考图，画面里也只有一只手入画，没有可辨识的角色身份。手的年龄感与皮肤纹理与提示词的 weathered 相符。构图偏离已经记在 prompt_adherence，不在这一项重复扣分",
+        "measured": "全片"
+      },
+      { "name": "scene_consistency", "status": "pass", "detail": "色调与 S001 一致，同一控制室" },
+      { "name": "motion_quality", "status": "pass", "detail": "无明显抖动或形变" },
+      { "name": "no_visual_artifact", "status": "pass", "detail": "画面干净" },
+      { "name": "no_red_line_violation", "status": "pass", "detail": "逐条比对片约 red_lines 无命中" }
+    ],
+    "score": 3.0,
+    "root_cause": "seed=42 这一次的构图完全偏离提示词，主体比例差一个数量级；音频流同时缺失，属生成异常而非提示词写得不清楚（提示词里 close-up 与 static 都写明了）"
+  }
+}

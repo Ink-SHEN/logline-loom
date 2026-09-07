@@ -31,6 +31,7 @@ YYYY-MM-DD-<短横线小写标题>.md
 |---|---|---|---|
 | 2026-09-04 | [`2026-09-04-kickoff.md`](2026-09-04-kickoff.md) | 五天冲刺日程、A/B/C 三人分工、契约冻结、GPU 分批策略 | 生效中。当晚依据 `/history` 实测数据修订，修订处以 `▶` 标出 |
 | 2026-09-07 | [`2026-09-07-editor-input-conventions.md`](2026-09-07-editor-input-conventions.md) | ⑦剪辑的两项输入约定：产物路径统一为扁平的 `shots/<candidate_id>/video.mp4` 且剪辑侧只读不猜；字幕走人工侧清单 `--subtitles`，不改契约 | 生效中，**待 B、C 追认**（动过 `contracts/` 的描述与示例值，未动 Schema）。给 `source_path` 加 pattern 的正式契约变更留到 ④生成 开工前一起提 |
+| 2026-09-08 | [`2026-09-08-generation-loop-conventions.md`](2026-09-08-generation-loop-conventions.md) | ④⑤⑥ 生成回环的三项约定：新候选必须同时换 `noise_seed` 与 `filename_prefix`（seed 分配权只归 ⑥）；⑥ 是打补丁不是重写（白名单 5 个字段且各归一个 `action` 管，对不上就打回 ⑤ 重开；4 个 action 整条打回上游）；⑤ 客观项只由 ffprobe + 代码判、主观项只认三个来源、未复核不许伪装成 pass | 生效中，**待 B、C 追认**（跨了 B 的 ④⑥ 与 C 的 ⑤，并沿用 09-07 的路径口径）。不改 Schema，第八节那 5 步不适用，但两条约定是跨工位的规矩，比照「三人一致同意」的口径办。`contracts/` **Schema 零改动**，`--selftest` 7/7、`negative_test.py` 8/8 复跑通过。09-07 留的「加 pattern」尾巴**本轮仍没提**——④ 刚落地、口径还没有真机产物验证过，理由与时机见该记录第四节 |
 
 ---
 
