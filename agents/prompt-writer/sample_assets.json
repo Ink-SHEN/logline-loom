@@ -1,0 +1,28 @@
+{
+  "_comment": "③提示词 Agent 的素材清单（assets manifest）示例，配合 agents/storyboard/sample.js 的镜头清单使用。键 = shot_id（形如 S007，优先匹配）或 consistency_group 组名（如 watchman，同组镜头共用）；值按 c04_gen_request 的 assets 形状填：I2V 给 first_frame，R2V 给 ref_images（当前模板只接了 ref_image_0/1 两个图位，最多 2 张）。node_filename 必须是已 POST /upload/image 上传、且重新查 /api/object_info 后出现在 LoadImage.image 枚举里的文件名，否则 ComfyUI 报 Value not in list: image；license 为 unknown 的素材禁止进成片。example.png 是 ComfyUI input/ 自带示例图，仅作占位。",
+  "watchman": {
+    "ref_images": [
+      {
+        "node_filename": "example.png",
+        "source_path": "comfyui/input/example.png",
+        "license": "self_generated",
+        "generated_by": "占位：正式跑时换成值守者正面定妆图（MiniMax-H3 T2V 预生成）"
+      },
+      {
+        "node_filename": "example.png",
+        "source_path": "comfyui/input/example.png",
+        "license": "self_generated",
+        "generated_by": "占位：正式跑时换成昏暗控制室场景参考图"
+      }
+    ],
+    "ref_image_size": "match"
+  },
+  "S007": {
+    "first_frame": {
+      "node_filename": "example.png",
+      "source_path": "comfyui/input/example.png",
+      "license": "self_generated",
+      "generated_by": "占位：正式跑时换成 S006 选中候选的定格帧（合闸前光影与机位衔接）"
+    }
+  }
+}

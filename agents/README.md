@@ -107,7 +107,7 @@ export const meta = {
 |---|---|---|---|
 | ① | 编剧 | `agents/screenwriter/` | ✅ 初稿已入库（**输出形状不合规，见第五节**） |
 | ② | 分镜 | `agents/storyboard/` | ✅ 初稿已入库（**不合规**） |
-| ③ | 提示词 | `agents/prompt-writer/` | ⬜ 待建 |
+| ③ | 提示词 | `agents/prompt-writer/` | ✅ 初稿已入库（输出对齐 c04_gen_request 并过校验，接入 LLM API，附 run.js 管线与素材清单示例 sample_assets.json） |
 | ④ | 生成 | `agents/generator/` | ⬜ 待建 |
 | ⑤ | 质检 | `agents/qa/` | ✅ 初稿已入库（**不合规，且审查对象错位**） |
 | ⑥ | 重试 | `agents/retry/` | ⬜ 待建 |
