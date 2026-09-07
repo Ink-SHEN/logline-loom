@@ -30,6 +30,7 @@ YYYY-MM-DD-<短横线小写标题>.md
 | 日期 | 文件 | 决定 | 状态 |
 |---|---|---|---|
 | 2026-09-04 | [`2026-09-04-kickoff.md`](2026-09-04-kickoff.md) | 五天冲刺日程、A/B/C 三人分工、契约冻结、GPU 分批策略 | 生效中。当晚依据 `/history` 实测数据修订，修订处以 `▶` 标出 |
+| 2026-09-07 | [`2026-09-07-editor-input-conventions.md`](2026-09-07-editor-input-conventions.md) | ⑦剪辑的两项输入约定：产物路径统一为扁平的 `shots/<candidate_id>/video.mp4` 且剪辑侧只读不猜；字幕走人工侧清单 `--subtitles`，不改契约 | 生效中，**待 B、C 追认**（动过 `contracts/` 的描述与示例值，未动 Schema）。给 `source_path` 加 pattern 的正式契约变更留到 ④生成 开工前一起提 |
 
 ---
 

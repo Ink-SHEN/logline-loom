@@ -104,11 +104,12 @@ grep -r "SELECTED" shots/*/selected.txt
 ## 四、成片阶段怎么用这个目录
 
 剪辑 Agent 产 c07_edit_decision 时，
-`selected` 列表直接引用这里的 `candidate_id`。
-最终成片里每一个镜头都能反查到：
+`timeline[]` 逐条引用这里的 `candidate_id`，`source_path` 原样取该候选 c05 的 `output.path`。
+**目录名 = `candidate_id` 这一扁平形态是全片唯一的产物路径口径**（第一节表格里那三行），
+谁也不要另拼一套。最终成片里每一个镜头都能反查到：
 
 ```
-成片时间码 → c07.selected → shots/S001_c01/meta.json
+成片时间码 → c07.timeline[].source_path → shots/S001_c01/meta.json
                               → params_snapshot.prompt   （提示词）
                               → params_snapshot.seed     （种子）
                               → upstream_refs            （c04 → c03 → c02 → c01）
