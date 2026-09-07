@@ -196,7 +196,15 @@ node agents/retry/run.js --qc tmp/qc --requests artifacts/genreq_<时间戳>/ \
      --shots-root shots/ --out-dir tmp/genreq_retry
 #   做不了的那些不是错误：写进 <输出目录>/needs_human.md，逐条注明转交哪一站、下一步命令是什么
 
-# ⑥ 的两份样例是实跑输出，夹具在 tmp/retry_sample/（gitignore 里），复现：
+# ⑥ 的两份样例是实跑输出。夹具在 tmp/retry_sample/——那是 .gitignore 里的目录，**没有入库**
+# （放这里是为了 envelope.notes 里的 rel(qcFile) 是一条干净的仓库相对路径，不是 C:/Users/... 绝对路径）。
+# 新 clone 上这条命令跑不了，得先照 agents/retry/sample.js 文件头重建 5 个输入文件（目录里另外两个
+# out/S002_c02.json、out/S004_c02.json 是跑出来的产物，不用建），输入一个数字都不用手写：
+#   genreq/S002_c01.json  ← ③提示词 --offline 的产物骨架，generation 对齐 sampleGenResultNoAudio.params_snapshot
+#   genreq/S004_c01.json  ← agents/prompt-writer/sample.js 的 sampleGenRequest 原文（R2V）
+#   qc/S002_c01.json      ← agents/qa/sample.js 的 sampleQAFail 原文（fail/retry/new_seed）
+#   qc/S004_c01.json      ← 一份 change_duration 的 c06，patch 只有 duration_seconds: 8
+#   shots/S002_c01/meta.json ← agents/generator/sample.js 的 sampleGenResultNoAudio 原文
 node agents/retry/run.js --qc tmp/retry_sample/qc --requests tmp/retry_sample/genreq \
      --shots-root tmp/retry_sample/shots --out-dir tmp/retry_sample/out
 
