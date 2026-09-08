@@ -13,7 +13,7 @@ import time
 import urllib.error
 import urllib.request
 
-from . import config
+from . import config, tunnel
 
 T2V_PROMPT_NODE = "140:131"
 T2V_DURATION_NODE = "140:133"
@@ -22,11 +22,19 @@ T2V_PREFIX_NODE = "92"
 
 
 def _auth_headers():
-    h = {"Content-Type": "application/json"}
-    token = config.proxy_token()
-    if token:
-        h["Authorization"] = "Bearer %s" % token
-    return h
+    return config.auth_headers()
+
+
+def _base():
+    """取当前可用的后端地址。
+
+    natapp 域名会变，所以不能把地址写死在配置里用完就算——每次调用前都要
+    重新探一次，探不到就抛错，由上层决定走回放还是报错。
+    """
+    url, detail = tunnel.current()
+    if not url:
+        raise RuntimeError(detail or "后端地址不可用")
+    return url
 
 
 def _get(url, timeout=10):
@@ -42,25 +50,21 @@ def _post(url, payload, timeout=30):
         return json.loads(r.read().decode("utf-8"))
 
 
-def probe_live():
-    """探测反向代理是否可达。返回 (是否可达, 说明文字)。"""
-    url = config.comfy_url()
-    if not url:
-        return False, "未配置 LOOM_COMFY_URL（真生成后端地址）"
+def probe_live(force=True):
+    """探测 Spark 是否可达。返回 (是否可达, 说明文字)。
+
+    会逐个试候选地址（secrets 硬地址 → Spark 上报 → 上次可用），
+    所以 natapp 换了域名也能自己找到新地址。
+    """
     if config.generation_mode() == "replay":
         return False, "运行模式被设为 replay，跳过探测"
-    try:
-        data = _get(url + "/system_stats", timeout=config.probe_timeout())
-        dev = (data.get("devices") or [{}])[0]
-        return True, "已连通：%s" % (dev.get("name", "ComfyUI 节点"))
-    except urllib.error.HTTPError as e:
-        return False, "代理返回 HTTP %s（token 可能不对，或节点未开）" % e.code
-    except Exception as e:
-        return False, "探测失败：%s" % e
+    url, detail = tunnel.current(force=force)
+    return bool(url), detail
 
 
 def submit_live(prompt_text, seconds=5.0, seed=None, prefix="loom/space"):
     """POST 一次 T2V 生成。返回 prompt_id。"""
+    base = _base()
     wf_path = os.path.join(config.WORKFLOWS_DIR, "workflow_api_t2v.json")
     wf = json.load(open(wf_path, encoding="utf-8"))
     if T2V_PROMPT_NODE in wf:
@@ -71,17 +75,18 @@ def submit_live(prompt_text, seconds=5.0, seed=None, prefix="loom/space"):
         wf[T2V_SEED_NODE]["inputs"]["noise_seed"] = int(seed)
     if T2V_PREFIX_NODE in wf:
         wf[T2V_PREFIX_NODE]["inputs"]["filename_prefix"] = prefix
-    res = _post(config.comfy_url() + "/prompt", {"prompt": wf})
+    res = _post(base + "/prompt", {"prompt": wf})
     return res.get("prompt_id")
 
 
 def poll_live(prompt_id, budget=None):
     """轮询直到出片或超过预算。返回 (本地视频路径 or None, 状态说明)。"""
+    base = _base()
     budget = budget or config.generate_budget()
     deadline = time.time() + budget
     while time.time() < deadline:
         try:
-            hist = _get("%s/history/%s" % (config.comfy_url(), prompt_id), timeout=10)
+            hist = _get("%s/history/%s" % (base, prompt_id), timeout=10)
         except Exception as e:
             return None, "轮询失败：%s" % e
         entry = (hist or {}).get(prompt_id)
@@ -90,19 +95,19 @@ def poll_live(prompt_id, budget=None):
                 for key in ("images", "gifs", "videos"):
                     for item in (node_out.get(key) or []):
                         if str(item.get("filename", "")).lower().endswith((".mp4", ".webm")):
-                            return _download(item), "真生成完成"
+                            return _download(base, item), "真生成完成"
         time.sleep(5)
     return None, "真生成在 %s 秒内未完成（prompt_id=%s），改用回放" % (budget, prompt_id)
 
 
-def _download(item):
+def _download(base, item):
     import urllib.parse
     q = urllib.parse.urlencode({
         "filename": item.get("filename"),
         "subfolder": item.get("subfolder", ""),
         "type": item.get("type", "output"),
     })
-    url = "%s/view?%s" % (config.comfy_url(), q)
+    url = "%s/view?%s" % (base, q)
     req = urllib.request.Request(url, headers=_auth_headers())
     with urllib.request.urlopen(req, timeout=120) as r:
         raw = r.read()
@@ -170,7 +175,7 @@ def query_task(prompt_id):
         return {"status": "done", "detail": "真生成完成", "path": t["result"], "elapsed": elapsed}
 
     try:
-        hist = _get("%s/history/%s" % (config.comfy_url(), prompt_id), timeout=10)
+        hist = _get("%s/history/%s" % (_base(), prompt_id), timeout=10)
     except Exception as e:
         return {"status": t.get("status", "queued"),
                 "detail": "查询后端失败：%s（隧道可能已断开）" % e, "elapsed": elapsed}
@@ -179,9 +184,9 @@ def query_task(prompt_id):
     if entry:
         for node_out in (entry.get("outputs") or {}).values():
             for key in ("images", "gifs", "videos"):
-                for item in (node_out.get(key) or []):
-                    if str(item.get("filename", "")).lower().endswith((".mp4", ".webm")):
-                        path = _download(item)
+                    for item in (node_out.get(key) or []):
+                        if str(item.get("filename", "")).lower().endswith((".mp4", ".webm")):
+                            path = _download(_base(), item)
                         t.update({"status": "done", "result": path})
                         _save_tasks(tasks)
                         return {"status": "done", "detail": "真生成完成",

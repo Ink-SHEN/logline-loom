@@ -80,12 +80,22 @@ def llm_timeout() -> int:
 
 
 def comfy_url() -> str:
-    """ComfyUI 反向代理地址。空 = 不接真生成。"""
-    return (os.environ.get("LOOM_COMFY_URL") or "").rstrip("/")
+    """第一个候选地址。新配置请用 LOOM_SPARK_BASE_URL（可填多个，逗号分隔，逐个探活）。"""
+    raw = os.environ.get("LOOM_SPARK_BASE_URL") or os.environ.get("LOOM_COMFY_URL") or ""
+    return raw.split(",")[0].strip().rstrip("/")
 
 
 def proxy_token() -> str:
     return os.environ.get("LOOM_PROXY_TOKEN") or ""
+
+
+def auth_headers():
+    """访问 Spark 代理的请求头。token 两端必须完全一致，否则代理返回 401。"""
+    h = {"Content-Type": "application/json"}
+    t = proxy_token()
+    if t:
+        h["Authorization"] = "Bearer %s" % t
+    return h
 
 
 def probe_timeout() -> float:

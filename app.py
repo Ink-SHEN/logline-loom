@@ -13,7 +13,7 @@ import os
 
 import gradio as gr
 
-from space import config, generate, pipeline, prompts, validate
+from space import config, generate, pipeline, prompts, tunnel, validate
 
 TITLE = "LOOM · 一句话生成 AI 短片的电影 Agent"
 INTRO = """
@@ -33,6 +33,46 @@ def self_check():
     lines.append("- 真生成后端（方案 A）：%s —— %s" % ("已连通" if reachable else "未连通，将走回放", detail))
     lines.append("- 回放素材（方案 B）：%d 段" % len(generate.replay_shots()))
     return "\n".join(lines)
+
+
+def tunnel_status(force=False):
+    """隧道地址状态。force=True 会重新探一遍所有候选地址。"""
+    if force:
+        tunnel.current(force=True)
+    return tunnel.status_lines()
+
+
+def _mount_tunnel_api(demo):
+    """挂两个 HTTP 端点，让 Spark 能把「当前隧道地址」主动报过来。
+
+    natapp 免费隧道的域名可能变。变的时候如果只能靠人去改 secrets，
+    评审那几天就是个定时炸弹——所以让 Spark 自己把新地址送上门。
+    鉴权用和代理同一个 token：token 对不上，谁也别想把我指到别的机器上。
+    """
+    app = getattr(demo, "app", None) or getattr(demo, "fastapi", None)
+    if app is None:
+        return False
+    try:
+        from fastapi import Request
+        from fastapi.responses import JSONResponse
+    except Exception:
+        return False
+
+    @app.post("/loom/tunnel/report")
+    async def _report(req: Request):
+        try:
+            body = await req.json()
+        except Exception:
+            return JSONResponse({"ok": False, "error": "请求体不是 JSON"}, status_code=400)
+        ok, msg = tunnel.save_reported(body.get("url", ""), body.get("token", ""))
+        return JSONResponse({"ok": ok, "detail": msg}, status_code=200 if ok else 403)
+
+    @app.post("/loom/tunnel/current")
+    async def _current():
+        url, detail = tunnel.current(force=True)
+        return {"url": url, "detail": detail, "candidates": [u for u, _ in tunnel.candidates()]}
+
+    return True
 
 
 def _selftest():
@@ -204,6 +244,17 @@ def build_ui():
                       inputs=[logline, duration, aspect, visual_style, audio_style, auto_gate, offline],
                       outputs=[status, c01, c02, c03, c04, gallery])
 
+        with gr.Accordion("隧道状态（创空间 ↔ DGX Spark 回源链路）", open=False):
+            gr.Markdown(
+                "真生成跑在本地 DGX Spark 的 ComfyUI 上。Spark 没有公网入口，"
+                "由它上面的 natapp 客户端主动外拨、在云端换一个公网地址，创空间访问这个地址回源。"
+                "natapp 免费隧道的地址**可能变**，所以这里不写死一个地址："
+                "Spark 每 5 分钟把当前地址报过来，用时再逐个探活。")
+            tunnel_md = gr.Markdown(tunnel_status())
+            with gr.Row():
+                refresh_tunnel_btn = gr.Button("重新解析隧道地址", scale=1)
+            refresh_tunnel_btn.click(lambda: tunnel_status(force=True), outputs=[tunnel_md])
+
         with gr.Accordion("查询生成任务（取回真生成视频）", open=False):
             gr.Markdown(
                 "真生成跑在本地 DGX Spark 的 ComfyUI 上，MiniMax-H3 一个镜头要 6–12 分钟，"
@@ -218,6 +269,7 @@ def build_ui():
 
         # 生成器逐段 yield 依赖队列；不开队列时界面会停在「等待输入…」不更新
         demo.queue(default_concurrency_limit=4)
+        _mount_tunnel_api(demo)
 
         gr.Markdown("""
 ---
