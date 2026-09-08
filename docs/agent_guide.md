@@ -270,20 +270,21 @@ git push                      # 卡住/超时是网络抖动，重试 2~5 次
 | 生成完拿回**同一个视频** | 输入完全相同，命中了 ComfyUI 缓存 | 换 `noise_seed` |
 | `Value not in list: image` | 参考图没上传 | 先 `POST /upload/image`，再引用文件名 |
 | `workflow["131"]` 取不到 | 用了子图内部 ID | 用完整复合编号 `workflow["140:131"]` |
-| 跑 `node agents/xxx/index.js` 报 `SyntaxError: Unexpected token 'export'` | 仓库缺 `package.json`，Node 把 `.js` 当 CommonJS | 需要有人入库 `{"type":"module"}` 的 `package.json`，见第十节 |
+| 跑 `node agents/xxx/index.js` 报 `SyntaxError: Unexpected token 'export'` | **历史问题，已不会再发生**：仓库缺 `package.json`，Node 把 `.js` 当 CommonJS（2026-09-08 已入库 `{"type":"module"}` 的 package.json） | 仓库内 `.js` 现全部按 ESM 跑；若在别的目录复现，给该目录补一份 `{"type":"module"}` 的 package.json |
 | 工作流节点报错 / ID 找不到 | ComfyUI 升级或重新导出过模板 | 重跑 `python workflows/preflight.py` 与 `verify_map.py`，别直接改 JSON |
 
 ---
 
-## 十、当前的阻塞项（谁先来解一下）
+## 十、曾经的阻塞项（已全部清零，保留作对照）
 
-`agents/` 下三份初稿的**目录约定可以沿用，输出形状全都不合规**，
-逐字段清单见 [agents/README.md 第五节](../agents/README.md)。另有：
+`agents/` 下初稿的**目录约定可以沿用、输出形状不合规**的问题早已逐站解决，
+逐字段对照见 [agents/README.md 第五节](../agents/README.md)。阻塞表则曾是：
 
-| 缺什么 | 影响 | 谁 |
+| 曾缺什么 | 当时的局面 | 现状 |
 |---|---|---|
-| `studio.mjs` / `prompts.js` / `tools/agent.mjs` / `tools/samples.js` / `tools/slideshow.mjs` / `tools/comfyui.mjs` 未入库 | 现有 9 个 JS 文件是孤岛，clone 下来跑不了 | 组员 gzsyl1 本地有，补一次上传 |
-| `package.json`（含 `"type": "module"`） | `.js` 里的 `export` 在 Node 下直接语法错 | 同上，随 `studio.mjs` 一起进来 |
-| ③④⑥⑦ 四个文件夹未建 | 流水线中间与后半段空着 | 按第二节认领 |
+| `studio.mjs` / `prompts.js` / `tools/agent.mjs` / `tools/samples.js` / `tools/comfyui.mjs` 未入库 | JS 文件是孤岛，clone 下来跑不了（`tools/slideshow.mjs` 渲染工具先一步入库） | 2026-09-08 全部入库。主程序 `node studio.mjs --help`；`tools/agent.mjs` 与 `tools/comfyui.mjs` 入库后，①②③⑤⑦ 各自的 `llm.js` 与 ④ 的 `comfyui.js` 降级为 re-export shim，真身只留一份（见 agents/README 第二节） |
+| `package.json`（含 `"type": "module"`） | `.js` 里的 `export` 在 Node 下直接语法错 | 已入库 |
+| ③④⑥⑦ 四个文件夹未建 | 流水线中间与后半段空着 | 全部已入库（现状见 agents/README 第四节状态表） |
 
-改之前先跑一次第五节那条校验命令，**亲眼看到那 4 条报错**，就知道要改成什么样了。
+现在跑全流水线：`agents/README.md` 第九节两种跑法——主程序一条命令（含两道人工关口点批），
+或逐站手接（单站调试）。新 Agent 的开发流程见第二节，改完照第五节自检。

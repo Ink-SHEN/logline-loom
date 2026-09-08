@@ -75,11 +75,13 @@ export const meta = {
 
 ### 共享部分放哪里
 
-三个 LLM Agent 本质上是同一次调用、只换 system prompt，所以调用逻辑是**共享管线**，
+五个 LLM Agent 本质上是同一次调用、只换 system prompt，所以调用逻辑是**共享管线**，
 不属于任何单个 Agent。按组员 gzsyl1 初稿的设计，它落在 `tools/agent.mjs`（`runAgent()`）。
 
-**注意：`tools/` 目录、根目录的 `studio.mjs` / `prompts.js` / `tools/samples.js` 目前都还没入库**，
-见第四节的状态表。在它们进来之前，`agents/*` 里的三份代码是无法独立跑通的。
+该文件已入库（第四节）。它进来后，`agents/{screenwriter,storyboard,prompt-writer,qa,editor}/llm.js`
+已降级为 3–7 行的 re-export shim（`export { chat, ... } from '../../tools/agent.mjs'`）——各站仍能
+自包含独立跑，但「HTTP 客户端 / 重试 / 抽 JSON / runAgent 装配」只有一份真身；`agents/generator/comfyui.js`
+同样降级为 `export *` 指向 `tools/comfyui.mjs`。共享调用管线与 ComfyUI 客户端的真身都在 `tools/`。
 
 ---
 
@@ -93,8 +95,8 @@ export const meta = {
 
 架构不需要重构——**加工位 = 加文件夹**，这正是这套目录约定的设计意图。
 
-> 第 2、3、4 步依赖的 `prompts.js` / `tools/samples.js` / `studio.mjs` 尚未入库。
-> 谁先来建这三个文件，建完立刻提交，后面的人就有地方挂。
+> 第 2、3、4 步依赖的 `prompts.js` / `tools/samples.js` / `studio.mjs` 都已入库，
+> 加完新 Agent 在聚合入口各补一行即可，无需等任何人。
 
 ---
 
@@ -117,17 +119,18 @@ export const meta = {
 c02 与 c07 带强制人工关口，示例里的 `gate.status` 故意留 `pending`，所以 `--file` 模式会判它们「关口未批」——
 那是第六节要的机器拦截，不是结构缺陷；`--selftest` 只查结构，7/7 通过。
 
-另需入库（不属于 `agents/`）。七站现在各自都有可独立执行的 `run.js`，
-**逐站手接就能跑通 ①→⑦**（每站的完成提示里都印着下一站的命令）；缺的是「一条命令串起七站」与「渲染成片」两件事：
+七站现在各自都有可独立执行的 `run.js`，**逐站手接就能跑通 ①→⑦**
+（每站的完成提示里都印着下一站的命令）；「一条命令串起七站」由主程序承担（下表第 1 行），
+渲染成片已就位（下表末行），编排层与共享层都已入库：
 
 | 路径 | 作用 | 状态 |
 |---|---|---|
-| `studio.mjs` | 主程序，串起 7 个工位 | ⬜ 组员本地有，未上传 |
-| `prompts.js` | 根聚合入口，再导出各 Agent 的 prompt | ⬜ 同上 |
-| `tools/agent.mjs` | `runAgent()` 共享调用管线 | ⬜ 同上。**目前 ①②③⑤⑦ 各自带了一份自包含的 `llm.js` 副本**，它入库后去重 |
-| `tools/samples.js` | 根聚合入口，再导出各 Agent 的 sample | ⬜ 同上 |
-| `tools/comfyui.mjs` | ComfyUI 客户端 | ⬜ 同上，但**提交生成已经不等它**：④生成 自带 `agents/generator/comfyui.js`（上传素材 / POST /prompt / 轮询 /history / 下载） |
-| `tools/slideshow.mjs` | 渲染：按 c07 的 timeline 逐条 trim+concat、烧字幕、混音 | ⬜ 同上。**仍然缺**——⑦剪辑 产出的是决策单不是成片，`final_output` 的 sha256/size_bytes 要等渲染后回填 |
+| `studio.mjs` | 主程序，串起 7 个工位 | ✅ 已入库（`node studio.mjs --help`。六档：1 编剧 → 2 分镜 → 3 提示词 → 4 ④⑤⑥回环 → 5 剪辑 → 6 渲染；两道强制人工关口（c02/c07）只由人 `--approve` 点批、机器绝不代批，未批就停靠并打印续跑命令；回环一轮 = ④提交→⑤质检→⑥打回收敛，`--dry-run` 停在「③产物 + ④提交计划」的离线边界；⑦出决策单先渲「审阅粗剪」再停靠，批完 `--from render` 只核验不重烧） |
+| `prompts.js` | 根聚合入口，再导出各 Agent 的 prompt | ✅ 已入库 |
+| `tools/agent.mjs` | `runAgent()` 共享调用管线（含 LLM HTTP 客户端与契约校验助手） | ✅ 已入库。**①②③⑤⑦ 各自的 `llm.js` 已降级为 re-export shim**，真身只有这一份（见第二节「共享部分放哪里」） |
+| `tools/samples.js` | 根聚合入口，再导出各 Agent 的 sample | ✅ 已入库 |
+| `tools/comfyui.mjs` | ComfyUI 客户端 | ✅ 已入库。**④生成 的 `agents/generator/comfyui.js` 已降级为 `export *` shim**（上传素材 / POST /prompt / 轮询 /history / 下载） |
+| `tools/slideshow.mjs` | 渲染成片：消费 c07_edit_decision，按 timeline trim+concat（cut 硬切 / dissolve 叠化 / 首尾淡入淡出）、烧 .ass 字幕与 AI 生成标识（主赛道硬要求）、loudnorm 到 `audio_mix.loudness_target_lufs`，渲染后**回填** `final_output` 的 sha256/size_bytes/duration_seconds 与 `audio_mix.measured_loudness_lufs` 并用 gate=approved 副本复跑权威校验（真产物 gate 不动，仍 pending 等人批）。已实测：11 镜夹具（含无音轨垫静音、48kHz 单声道、双 dissolve、中文字幕）端到端出片 63s，抽帧核对叠化/字幕/AI 标识/时序逐项吻合 | ✅ 已入库（`node tools/slideshow.mjs --help`；渲染机需 ffmpeg 带 libass + 中文字体，见文件头「运行前提」） |
 
 ---
 
@@ -298,15 +301,25 @@ python contracts/validate_contract.py --contract c02_screenplay --file artifacts
 
 ## 九、七站怎么跑
 
-`studio.mjs` 还没入库（第四节），但七站各自都有可独立执行的 `run.js`，
-**逐站手接就能跑通全链路**：每站跑完都会把下一站的命令连着实际路径打印出来，照着抄即可。
-下面是最短的一条路径，`<时间戳>` 用上一站打印出来的那个目录名。
+最省事的是主程序一条命令（`node studio.mjs --help` 是全部档位与参数的权威说明）：
+
+```bash
+node studio.mjs --logline "一句话故事（20–400 字）" --offline     # ①→…，到强制人工关口停下等人批
+node studio.mjs --approve artifacts/screenplay_<时间戳>.json --reviewer <你的名字>   # 人点批（只有人能跑）
+node studio.mjs --from 2 --offline                                # 批完续跑
+node studio.mjs --from 4 --genreq artifacts/genreq_<时间戳>/ --dry-run   # 离线边界：③产物 + ④提交计划
+```
+
+也可以逐站手接（单站调试、或想替某一站换参数时更顺手）。七站各自都有可独立执行的 `run.js`，
+每站跑完都会把下一站的命令连着实际路径打印出来，照着抄即可。下面是最短的一条路径，
+`<时间戳>` 用上一站打印出来的那个目录名。
 
 ```bash
 # ① 编剧：c01_brief（人写）→ c02_screenplay。c02 是强制人工关口之一，产出的 gate 一律 pending
 node agents/screenwriter/run.js --brief artifacts/brief_v1.json --offline      # 先离线看形状
 node agents/screenwriter/run.js --brief artifacts/brief_v1.json                # 配好 Key 走 LLM
-# ↓ 人工看过剧本、把 gate.status 改成 approved，②分镜 才肯开工（机器拦，见第六节）
+# ↓ 人工看过剧本、点批放行（只有人能批，机器拦，见第六节）：
+#   node studio.mjs --approve artifacts/screenplay_<时间戳>.json --reviewer <你的名字>
 
 # ② 分镜：c02 → c03_shotlist（每镜带 workflow_type，它决定 ③ 选哪份工作流、④ 按类型分批入队）
 node agents/storyboard/run.js --screenplay artifacts/screenplay_<时间戳>.json
