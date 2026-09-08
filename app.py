@@ -102,7 +102,7 @@ def _fmt(doc):
     return json.dumps(doc, ensure_ascii=False, indent=2)
 
 
-def run_pipeline(logline, duration, aspect, visual_style, audio_style, auto_gate, offline):
+def run_pipeline(logline, duration, aspect, visual_style, audio_style, requested_shots, auto_gate, offline):
     """主流程。逐段 yield，界面上能看到 Agent 一个个往下走。"""
     if not logline or len(logline.strip()) < 20:
         yield "**请至少输入 20 个字的一句话故事**（契约 c01_brief 对 logline 的硬性要求）。", None, None, None, None, None
@@ -117,8 +117,12 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, auto_gate
         return "\n\n".join(logs) + "\n\n" + status,
 
     # ① 片约
+    reqs = []
+    if requested_shots:
+        reqs = [s for s in requested_shots.splitlines() if s and s.strip()]
     brief = pipeline.build_brief(logline, duration=duration, aspect_ratio=aspect,
-                                 visual_style=visual_style, audio_style=audio_style)
+                                 visual_style=visual_style, audio_style=audio_style,
+                                 requested_shots=reqs)
     ok, problems = validate.validate("c01_brief", brief, check_gates=True)
     logs.append("**① 片约 c01_brief**：%s" % ("通过契约校验" if ok else "不通过：%s" % "; ".join(problems[:3])))
     yield "\n\n".join(logs), brief, None, None, None, None
@@ -160,7 +164,7 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, auto_gate
     logs[-1] = "**③ 分镜 Agent**：%s" % note
     yield "\n\n".join(logs), brief, screenplay, shotlist, None, None
 
-    # ④ 提示词
+    # ④ 提示词：为分镜表里「第一个会被真生成的镜头」写生成请求
     logs.append("**④ 提示词 Agent**：正在写英文提示词…")
     yield "\n\n".join(logs), brief, screenplay, shotlist, None, None
     # c03 已经给首镜定了 workflow_type，c04 必须沿用——分镜说 T2V 就不能自己改成 R2V，
@@ -222,15 +226,25 @@ def build_ui():
             with gr.Column(scale=3):
                 logline = gr.Textbox(
                     label="一句话故事（logline，20–400 字）",
-                    placeholder="例：一位独自值守射电望远镜阵列的夜班技师，在最后一个班次里收到一段来自自己未来的信号。",
+                    placeholder="用一句话讲完整个故事：谁 + 在什么场景 + 遇到什么 → 结局怎样。越具体越好，但别展开成段落。例：一位独自值守射电望远镜阵列的夜班技师，在最后一个班次收到一段来自自己未来的信号。",
                     lines=3)
                 with gr.Row():
                     duration = gr.Slider(60, 300, value=150, step=10, label="目标时长（秒）")
                     aspect = gr.Dropdown(["16:9 (Widescreen)", "1:1 (Square)", "9:16 (Portrait)"],
                                          value="16:9 (Widescreen)", label="画幅")
                 with gr.Row():
-                    visual_style = gr.Textbox(label="视觉风格（可留空用默认）", lines=2)
-                    audio_style = gr.Textbox(label="声音风格（可留空）", lines=2)
+                    visual_style = gr.Textbox(
+                        label="视觉风格（可选，留空则 AI 自定）",
+                        placeholder="例：冷蓝调赛博朋克夜景；低饱和胶片颗粒；水墨风留白",
+                        lines=2)
+                    audio_style = gr.Textbox(
+                        label="声音风格（可选，留空则 AI 自定）",
+                        placeholder="例：低沉环境音 + 心跳节拍；空灵合成器；雨声与无线电杂音",
+                        lines=2)
+                requested_shots = gr.Textbox(
+                    label="特定镜头设计（可选）",
+                    placeholder="你想在片子里一定要看到的镜头，每行一个，最好写清景别 / 动作 / 画面。例：\n一个主角逆光回头的正面特写，身后屏幕全亮\n俯拍主角走过空无一人的城市广场，只有路灯依次亮起",
+                    lines=3)
                 with gr.Row():
                     auto_gate = gr.Checkbox(value=True, label="自动批准人工关口（演示模式）")
                     offline = gr.Checkbox(value=False, label="离线模式（不调 LLM，只看管线形状）")
@@ -252,7 +266,8 @@ def build_ui():
                 gallery = gr.Gallery(label="镜头（真生成 / 预生成回放）", columns=3, height=320)
 
         run_btn.click(run_pipeline,
-                      inputs=[logline, duration, aspect, visual_style, audio_style, auto_gate, offline],
+                      inputs=[logline, duration, aspect, visual_style, audio_style,
+                              requested_shots, auto_gate, offline],
                       outputs=[status, c01, c02, c03, c04, gallery])
 
         with gr.Accordion("隧道状态（创空间 ↔ DGX Spark 回源链路）", open=False):

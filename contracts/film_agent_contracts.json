@@ -159,6 +159,11 @@
             "aspect_ratio": { "$ref": "#/$defs/aspect_ratio" },
             "visual_style": { "type": "string", "minLength": 5, "description": "视觉风格锚点。R2V 参考集与所有镜头提示词都要向它对齐，否则风格一致性会散" },
             "audio_style": { "type": "string", "description": "声音风格。H3 原生出音频，声音叙事是本模型的强项，值得单独定调" },
+            "requested_shots": {
+              "type": "array",
+              "description": "【可选】使用者特别想看到的镜头设计。编剧必须把它们作为剧本 beats 的一环写进去，使其能进入最终成片",
+              "items": { "type": "string" }
+            },
             "main_character": {
               "type": "object",
               "properties": {

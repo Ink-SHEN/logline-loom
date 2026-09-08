@@ -65,7 +65,8 @@ def _agent_version(slug):
 
 
 def build_brief(logline, duration=150, aspect_ratio="16:9 (Widescreen)",
-                visual_style="", audio_style="", theme="", character=None):
+                visual_style="", audio_style="", theme="", character=None,
+                requested_shots=None):
     payload = {
         "logline": logline.strip(),
         "theme": (theme or "").strip() or "用 AI，提前看见未来",
@@ -83,6 +84,10 @@ def build_brief(logline, duration=150, aspect_ratio="16:9 (Widescreen)",
     }
     if (audio_style or "").strip():
         payload["audio_style"] = audio_style.strip()
+    if requested_shots:
+        reqs = [s.strip() for s in requested_shots if s and s.strip()]
+        if reqs:
+            payload["requested_shots"] = reqs
     if character:
         payload["main_character"] = character
     return {
