@@ -287,6 +287,8 @@ def call_agent(slug, upstream_doc, user_message, offline=False):
         return doc, "已降级为示例产物（形状合规，内容与本次 logline 无关）", True
 
     system = prompts.load_prompt(slug)
+    # 按站取模型：允许创意环节（编剧）上更强的大模型，结构化环节走快的。
+    model = config.llm_model(slug)
     skeleton = json.dumps(contract_skeleton(spec["contract"]), ensure_ascii=False, indent=2)
     messages = [
         {"role": "system", "content": system},
@@ -300,7 +302,7 @@ def call_agent(slug, upstream_doc, user_message, offline=False):
         # 一轮不够（实测 c04 只有 1/3 一次过），放到 3 轮——这本身就是
         # 「反馈闭环、重试和可观测性 6%」要展示的东西，重试次数也如实写进 notes。
         fix_rounds = config.llm_fix_rounds()
-        text = llm.chat(messages)
+        text = llm.chat(messages, model=model)
         for attempt in range(fix_rounds + 1):
             doc = _normalize(
                 llm.extract_json(text), spec, upstream_id,
@@ -319,7 +321,7 @@ def call_agent(slug, upstream_doc, user_message, offline=False):
                     "请逐条修正后重新输出完整的 JSON（仍只输出一个 JSON 代码块，不要省略字段）。"
                     % "\n- ".join(problems[:12])},
             ]
-            text = llm.chat(messages)
+            text = llm.chat(messages, model=model)
     except Exception as e:
         doc = _fallback(slug, upstream_id, "LLM 调用失败：%s" % e)
         return doc, "LLM 调用失败，已降级为示例产物：%s" % e, True

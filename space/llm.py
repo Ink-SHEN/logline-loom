@@ -28,9 +28,9 @@ def _headers():
     return {"Content-Type": "application/json", "Authorization": "Bearer %s" % key}
 
 
-def _request_body(messages, temperature, thinking_off):
+def _request_body(messages, temperature, thinking_off, model=None):
     body = {
-        "model": config.llm_model(),
+        "model": model or config.llm_model(),
         "messages": messages,
         "temperature": temperature,
     }
@@ -41,7 +41,8 @@ def _request_body(messages, temperature, thinking_off):
     return body
 
 
-def chat(messages, temperature=0.7, retries=2, backoff=1.0, timeout=None):
+def chat(messages, temperature=0.7, retries=2, backoff=1.0, timeout=None, model=None):
+    """model 可为空，此时用 config.llm_model()；传了就按站覆盖。"""
     url = config.llm_base_url() + "/chat/completions"
     thinking_off = not config.llm_thinking()
     timeout = timeout or config.llm_timeout()
@@ -51,7 +52,7 @@ def chat(messages, temperature=0.7, retries=2, backoff=1.0, timeout=None):
         if attempt:
             time.sleep(attempt * backoff)
         # 某些端点不认 enable_thinking；一旦被拒，后续重试不再带这个参数
-        body = json.dumps(_request_body(messages, temperature, thinking_off)).encode("utf-8")
+        body = json.dumps(_request_body(messages, temperature, thinking_off, model)).encode("utf-8")
         req = urllib.request.Request(url, data=body, headers=_headers(), method="POST")
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:

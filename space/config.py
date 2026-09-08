@@ -18,12 +18,30 @@ def llm_base_url() -> str:
     return (os.environ.get("LOOM_LLM_BASE_URL") or "https://api-inference.modelscope.cn/v1").rstrip("/")
 
 
-def llm_model() -> str:
-    # 注意：Qwen2.5-72B-Instruct 已从魔搭 API-Inference 下线（2026-09 实测 /v1/models 里没有了）。
-    # 同为赛事点名的 Qwen3.8 系列里，Flash-Next 比 27B 快约 4 倍（2026-09-08 实测：
-    # 同样写 3 场景剧本 JSON，Flash-Next 31.9s / 24.4 ch/s，27B 129.1s / 7.4 ch/s）。
-    # 27B 会撞上 120s 超时上限导致三个 Agent 全部降级，所以默认走 Flash-Next。
-    return os.environ.get("LOOM_LLM_MODEL") or "Qwen/Qwen3.8-Flash-Next"
+# 2026-09-08 实测选型依据（同一 logline、同一套契约）：
+#   Qwen3.8-Flash-Next        全链路 62s，剧本 3704 字符，分镜严格 8 镜（守 6–8 的约束）
+#   Qwen3.5-397B-A17B         全链路 72s，剧本 1946 字符，8 镜，转折偏生硬
+#   DeepSeek-V4-Pro-0813      全链路 83s，剧本 3515 字符，但分镜给到 15–21 镜（不听约束）
+#   Qwen3.8-27B               单轮 129s，会撞超时（且 Qwen2.5-72B 已从 API-Inference 下线）
+# 结论：创意环节（编剧）换更强的模型收益有限但可见；结构化环节（分镜/提示词）
+# 反而是快的模型更守规矩。所以默认全站 Flash-Next，但留按站覆盖的口子。
+DEFAULT_LLM_MODEL = "Qwen/Qwen3.8-Flash-Next"
+
+
+def llm_model(slug=None) -> str:
+    """取模型名，支持按 Agent 站覆盖。
+
+    优先级：LOOM_LLM_MODEL_<SLUG>  >  LOOM_LLM_MODEL  >  默认值。
+    例如只想让编剧用大模型、分镜提示词仍走快模型：
+        LOOM_LLM_MODEL_SCREENWRITER=deepseek-ai/DeepSeek-V4-Pro-0813
+        LOOM_LLM_MODEL=Qwen/Qwen3.8-Flash-Next
+    """
+    if slug:
+        key = "LOOM_LLM_MODEL_%s" % str(slug).upper().replace("-", "_")
+        v = os.environ.get(key)
+        if v:
+            return v
+    return os.environ.get("LOOM_LLM_MODEL") or DEFAULT_LLM_MODEL
 
 
 def llm_thinking() -> bool:
