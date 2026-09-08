@@ -105,11 +105,16 @@ def _normalize(raw, spec, upstream_id, notes=""):
     if isinstance(raw, dict):
         if isinstance(raw.get("payload"), dict):
             payload = raw["payload"]
-        elif isinstance(raw.get("scenes"), list):
-            payload = raw
+        else:
+            # 模型经常直接吐 payload 本体而不套 `payload` 键（c03 是 {shots:[...]}，
+            # c02 是 {scenes:[...]}）。这里按契约统一收：除 envelope/payload 外
+            # 剩下的就是 payload。形状对不对交给后面的契约校验去判，不要在这里误杀。
+            body = {k: v for k, v in raw.items() if k not in ("envelope", "payload")}
+            if body:
+                payload = body
     if payload is None:
-        raise llm.LlmError("输出缺少 payload（或顶层 scenes），无法规范化")
-    return {
+        raise llm.LlmError("输出缺少 payload，无法规范化")
+    doc = {
         "envelope": {
             "schema_version": "1.0",
             "artifact_id": "%s.%s" % (spec["prefix"], _stamp()),
@@ -125,6 +130,9 @@ def _normalize(raw, spec, upstream_id, notes=""):
         },
         "payload": payload,
     }
+    if spec["contract"] == "c04_gen_request":
+        doc = _inject_node_ids(doc)
+    return doc
 
 
 def shape_problems(doc, contract):
@@ -135,6 +143,136 @@ def shape_problems(doc, contract):
         gate["status"] = "approved"
     ok, problems = validate.validate(contract, probe, check_gates=True)
     return problems
+
+
+def contract_skeleton(contract, max_depth=3):
+    """从契约 schema 生成「最小必填结构」骨架，用来喂给模型。
+
+    之前模型三次都没按契约输出（c04 只给了 shot_id/prompt/timecodes 三个字段），
+    根因是提示词里只有自然语言描述、没有结构。这里直接从 contracts/ 那份权威
+    schema 推导骨架：契约一改，提示自动跟着改，不用再维护第二份描述。
+    """
+    path = os.path.join(config.CONTRACTS_DIR, "film_agent_contracts.json")
+    spec = json.load(open(path, encoding="utf-8"))
+    defs = spec.get("$defs", {})
+
+    def resolve(s):
+        if isinstance(s, dict) and "$ref" in s:
+            ref = s["$ref"].split("/")[-1]
+            merged = dict(defs.get(ref, {}))
+            merged.update({k: v for k, v in s.items() if k != "$ref"})
+            return merged
+        return s or {}
+
+    def build(s, depth):
+        s = resolve(s)
+        if "const" in s:
+            return s["const"]
+        if "enum" in s and s["enum"]:
+            return s["enum"][0]
+        props, req = s.get("properties") or {}, s.get("required") or []
+        if s.get("type") == "object" or props:
+            out = {}
+            for k in req:
+                if k not in props:
+                    out[k] = "<?>"
+                elif depth <= 0:
+                    out[k] = "<%s>" % (resolve(props[k]).get("type", "any"))
+                else:
+                    out[k] = build(props[k], depth - 1)
+            return out
+        if s.get("type") == "array":
+            # 给空数组而不是占位符：占位符会被模型当成示例值照抄
+            # （实测把 ref_images 填成了 "<Picture 1>" 这种说明文字）。
+            # 空数组既表明类型，又让模型按语义决定填不填。
+            return []
+        hint = s.get("type") or "any"
+        # 把 pattern 写进占位符。只说「string」模型会填成 'c01'，
+        # 而契约要的是 'S001_c01'——格式约束必须让模型看得见。
+        if s.get("pattern"):
+            hint = "%s，必须匹配正则 %s" % (hint, s["pattern"])
+        lo, hi = s.get("minimum"), s.get("maximum")
+        if lo is not None or hi is not None:
+            hint = "%s，取值 %s~%s" % (hint, lo if lo is not None else "-∞", hi if hi is not None else "+∞")
+        return "<%s>" % hint
+
+    node = defs.get(contract) or {}
+    sk = build((node.get("properties") or {}).get("payload") or {}, max_depth)
+    # node_ids 是工程常量，由 _inject_node_ids 从 node_id_map.json 注入，
+    # 不给模型填——让它猜节点 ID 既违反契约（明写「禁止硬编码」）又必然出错。
+    if contract == "c04_gen_request" and isinstance(sk.get("workflow"), dict):
+        sk["workflow"].pop("node_ids", None)
+    return sk
+
+
+def _clean_assets(assets):
+    """参考素材数组里只保留形状合法的 asset_ref（object），其余丢掉。
+
+    asset_ref 要求 node_filename / source_path / license 三个字段，而模型
+    常常直接填文件名字符串（'watchman_character_sheet.png'）——留着必然过不了校验，
+    丢掉反而能保住这一轮的输出。
+    """
+    if not isinstance(assets, dict):
+        return {}
+    out = {}
+    for key, value in assets.items():
+        if key in ("ref_images", "ref_videos", "ref_audios"):
+            if isinstance(value, list):
+                keep = [x for x in value if isinstance(x, dict)]
+                if keep:
+                    out[key] = keep
+            elif isinstance(value, dict):
+                out[key] = value
+        else:
+            out[key] = value
+    return out
+
+
+def _inject_node_ids(doc):
+    """c04 的 workflow.node_ids 由程序从 workflows/node_id_map.json 注入。
+
+    契约写得很死：「从 node_id_map.json 抄来的 {语义: [节点ID, 键名]}，禁止硬编码节点 ID，
+    T2V/I2V 的 ID 是子图摊平后的复合编号如 '140:131'」。这类确定性映射让 LLM 生成
+    只会出错，和 envelope 一样属于程序该覆盖的部分。
+    """
+    payload = doc.get("payload")
+    workflow = payload.get("workflow") if isinstance(payload, dict) else None
+    if not isinstance(workflow, dict):
+        return doc
+
+    # 契约对 assets 有三条条件规则（T2V 不得带素材 / I2V 必须有 first_frame /
+    # R2V 必须有非空 ref_images）。asset_ref 要 node_filename + source_path + license
+    # 三个字段，模型十次有九次填不出来——选了 R2V 就等于必然过不了校验。
+    # 素材填不合规时统一回退 T2V：首镜用文生视频本来就是最合理的默认，
+    # 也比让整轮产物降级成示例更贴近真实内容。
+    wtype = str(workflow.get("type") or "").upper()
+    assets = _clean_assets(payload.get("assets")) if wtype != "T2V" else {}
+    if wtype == "I2V" and not isinstance(assets.get("first_frame"), dict):
+        wtype = "T2V"
+        assets = {}
+    elif wtype == "R2V" and not assets.get("ref_images"):
+        wtype = "T2V"
+        assets = {}
+    workflow["type"] = wtype
+    payload["assets"] = assets
+
+    api = str(workflow.get("api_json") or "")
+    kind = wtype.lower() if wtype.lower() in ("t2v", "i2v", "r2v") else "t2v"
+    if kind not in api:
+        workflow["api_json"] = "workflow_api_%s.json" % kind
+    try:
+        mapping = json.load(open(os.path.join(config.WORKFLOWS_DIR, "node_id_map.json"), encoding="utf-8"))
+        fields = (mapping.get(kind) or {}).get("fields") or {}
+    except Exception:
+        return doc
+    node_ids = {"source": "workflows/node_id_map.json"}
+    for semantic, spec in fields.items():
+        if isinstance(spec, dict) and spec.get("node") and spec.get("key"):
+            node_ids[semantic] = [spec["node"], spec["key"]]
+    if len(node_ids) > 1:
+        workflow["node_ids"] = node_ids
+    return doc
+    return doc
 
 
 def call_agent(slug, upstream_doc, user_message, offline=False):
@@ -149,28 +287,39 @@ def call_agent(slug, upstream_doc, user_message, offline=False):
         return doc, "已降级为示例产物（形状合规，内容与本次 logline 无关）", True
 
     system = prompts.load_prompt(slug)
+    skeleton = json.dumps(contract_skeleton(spec["contract"]), ensure_ascii=False, indent=2)
     messages = [
         {"role": "system", "content": system},
-        {"role": "user", "content": user_message},
+        {"role": "user", "content":
+            "%s\n\n下面是 `%s` 契约要求的最小结构（由 contracts/ 里的 schema 自动生成）。"
+            "照它填充，必填字段一个都不能少，也不要在 payload 里多加字段：\n```json\n%s\n```"
+            % (user_message, spec["contract"], skeleton)},
     ]
     try:
+        # 纠正闭环：把校验器报出的问题清单回灌给模型重生成。
+        # 一轮不够（实测 c04 只有 1/3 一次过），放到 3 轮——这本身就是
+        # 「反馈闭环、重试和可观测性 6%」要展示的东西，重试次数也如实写进 notes。
+        fix_rounds = config.llm_fix_rounds()
         text = llm.chat(messages)
-        doc = _normalize(llm.extract_json(text), spec, upstream_id, "LLM 生成")
-        problems = shape_problems(doc, spec["contract"])
-        if not problems:
-            return doc, "LLM 生成并通过契约结构校验", False
-        # 纠正一轮：把问题清单回灌给模型
-        messages += [
-            {"role": "assistant", "content": text},
-            {"role": "user", "content": "上一轮输出未通过结构校验：\n- %s\n请按契约重新输出修正后的完整 JSON（仍只输出一个 JSON 代码块）。"
-             % "\n- ".join(problems[:12])},
-        ]
-        text2 = llm.chat(messages)
-        doc2 = _normalize(llm.extract_json(text2), spec, upstream_id, "LLM 生成（含一轮纠正重试）")
-        problems2 = shape_problems(doc2, spec["contract"])
-        if not problems2:
-            return doc2, "LLM 生成并通过契约结构校验（含一轮纠正重试）", False
-        raise llm.LlmError("纠正一轮后仍未通过结构校验：\n- " + "\n- ".join(problems2[:12]))
+        for attempt in range(fix_rounds + 1):
+            doc = _normalize(
+                llm.extract_json(text), spec, upstream_id,
+                "LLM 生成" + ("（含 %d 轮纠正重试）" % attempt if attempt else ""))
+            problems = shape_problems(doc, spec["contract"])
+            if not problems:
+                return doc, ("LLM 生成并通过契约结构校验"
+                             + ("（含 %d 轮纠正重试）" % attempt if attempt else "")), False
+            if attempt >= fix_rounds:
+                raise llm.LlmError("纠正 %d 轮后仍未通过结构校验：\n- " % fix_rounds
+                                   + "\n- ".join(problems[:12]))
+            messages += [
+                {"role": "assistant", "content": text},
+                {"role": "user", "content":
+                    "上一轮输出未通过结构校验：\n- %s\n"
+                    "请逐条修正后重新输出完整的 JSON（仍只输出一个 JSON 代码块，不要省略字段）。"
+                    % "\n- ".join(problems[:12])},
+            ]
+            text = llm.chat(messages)
     except Exception as e:
         doc = _fallback(slug, upstream_id, "LLM 调用失败：%s" % e)
         return doc, "LLM 调用失败，已降级为示例产物：%s" % e, True
@@ -192,36 +341,67 @@ def _fallback(slug, upstream_id, reason):
     return doc
 
 
-def generation_step(gen_request):
-    """④生成：先探测隧道，可达就真生成，否则回放（回放一定标注）。"""
+def generation_step(gen_request, wait_for_live=False):
+    """⑤生成：探测隧道 → 可达就异步提交真生成，不可达就回放（回放一定标注）。
+
+    H3 在 Spark 上一个镜头要 6–12 分钟，同步等出片在评审场景里不成立，
+    所以默认异步：提交完立刻返回，界面先放参考预览（标注清楚不是本次结果），
+    评委拿 prompt_id 回头再查。wait_for_live=True 才走原来的同步等待（本地自测用）。
+    """
     reachable, detail = generate.probe_live()
+    preview = generate.replay_shots()
+
     if not reachable:
-        shots = generate.replay_shots()
         return {
             "mode": "replay",
             "detail": detail,
-            "shots": shots,
-            "note": generate.replay_note(),
+            "shots": preview,
+            "note": generate.replay_note() or "隧道不可达，当前展示预生成回放",
         }
 
     prompt_text, seconds = _first_prompt(gen_request)
     try:
-        pid = generate.submit_live(prompt_text, seconds, seed=random.randint(1, 2 ** 31 - 1))
-        path, status = generate.poll_live(pid)
-        if path:
-            return {"mode": "live", "detail": detail, "shots": [path], "note": status, "prompt_id": pid}
-        shots = generate.replay_shots()
-        return {"mode": "replay", "detail": detail, "shots": shots,
-                "note": "%s（本次为预生成回放）" % status, "prompt_id": pid}
+        if wait_for_live:
+            pid = generate.submit_live(prompt_text, seconds, seed=random.randint(1, 2 ** 31 - 1))
+            path, status = generate.poll_live(pid)
+            if path:
+                return {"mode": "live", "detail": detail, "shots": [path],
+                        "note": status, "prompt_id": pid}
+            return {"mode": "replay", "detail": detail, "shots": preview,
+                    "note": "%s（本次为预生成回放）" % status, "prompt_id": pid}
+
+        task = generate.submit_async(prompt_text, seconds,
+                                     seed=random.randint(1, 2 ** 31 - 1))
+        eta = task.get("eta_seconds", 0)
+        return {
+            "mode": "live_async",
+            "detail": detail,
+            "shots": preview,
+            "prompt_id": task["prompt_id"],
+            "eta_seconds": eta,
+            "note": ("已向 Spark 上的 ComfyUI 提交真生成任务，预计 %d 分钟出片。"
+                     "下方播放的是**参考预览**（此前生成的镜头），**不是本次生成的结果**；"
+                     "用任务 ID `%s` 在下方「查询生成任务」取回真生成视频。"
+                     % (max(1, round(eta / 60)), task["prompt_id"])),
+        }
     except Exception as e:
-        shots = generate.replay_shots()
-        return {"mode": "replay", "detail": detail, "shots": shots,
+        return {"mode": "replay", "detail": detail, "shots": preview,
                 "note": "真生成提交失败：%s。当前展示预生成回放" % e}
 
 
 def _first_prompt(gen_request):
-    """从 c04 里取第一个镜头的第一条提示词与时长。"""
+    """从 c04 里取出要送进 ComfyUI 的提示词与时长。
+
+    c04_gen_request 契约的 payload 是**单个镜头**的请求（required 是 shot_id /
+    candidate_id，不是数组），所以正路是读 payload.generation。
+    数组形态只是给兼容旧输出留的退路。
+    """
     payload = gen_request.get("payload") or {}
+
+    gen = payload.get("generation")
+    if isinstance(gen, dict) and gen.get("prompt"):
+        return _clip(gen.get("prompt"), gen.get("duration_seconds"))
+
     shots = payload.get("shots") or payload.get("requests") or []
     if isinstance(shots, dict):
         shots = list(shots.values())
@@ -230,10 +410,14 @@ def _first_prompt(gen_request):
             continue
         text = s.get("prompt") or s.get("prompt_text") or (s.get("workflow") or {}).get("prompt")
         if text:
-            secs = s.get("duration_seconds") or s.get("seconds") or 5
-            try:
-                secs = float(secs)
-            except Exception:
-                secs = 5.0
-            return text, max(3.0, min(secs, 8.0))
+            return _clip(text, s.get("duration_seconds") or s.get("seconds"))
     return "cinematic science fiction shot, atmospheric, shallow depth of field", 5.0
+
+
+def _clip(text, seconds):
+    try:
+        secs = float(seconds or 5)
+    except Exception:
+        secs = 5.0
+    # H3 单次出片上限 15 秒；创空间演示取 3–8 秒，兼顾等待时间与画面完整度
+    return text, max(3.0, min(secs, 8.0))

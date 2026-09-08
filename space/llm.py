@@ -28,25 +28,40 @@ def _headers():
     return {"Content-Type": "application/json", "Authorization": "Bearer %s" % key}
 
 
-def chat(messages, temperature=0.7, retries=2, backoff=1.0, timeout=None):
-    url = config.llm_base_url() + "/chat/completions"
-    body = json.dumps({
+def _request_body(messages, temperature, thinking_off):
+    body = {
         "model": config.llm_model(),
         "messages": messages,
         "temperature": temperature,
-    }).encode("utf-8")
+    }
+    # Qwen3 系默认开 thinking，实测一轮剧本要产出 5000+ 字符的推理内容，
+    # 关掉后同样请求 35.0s → 12.1s，且正文反而更长（不再把预算耗在 reasoning 上）。
+    if thinking_off:
+        body["enable_thinking"] = False
+    return body
+
+
+def chat(messages, temperature=0.7, retries=2, backoff=1.0, timeout=None):
+    url = config.llm_base_url() + "/chat/completions"
+    thinking_off = not config.llm_thinking()
     timeout = timeout or config.llm_timeout()
 
     last = None
     for attempt in range(retries + 1):
         if attempt:
             time.sleep(attempt * backoff)
+        # 某些端点不认 enable_thinking；一旦被拒，后续重试不再带这个参数
+        body = json.dumps(_request_body(messages, temperature, thinking_off)).encode("utf-8")
         req = urllib.request.Request(url, data=body, headers=_headers(), method="POST")
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")[:300]
+            if thinking_off and "enable_thinking" in detail:
+                thinking_off = False
+                last = LlmError("端点不接受 enable_thinking，已去掉重试", retryable=True)
+                continue
             if e.code in RETRY_STATUS or e.code >= 500:
                 last = LlmError("HTTP %s：%s" % (e.code, detail), retryable=True)
                 continue

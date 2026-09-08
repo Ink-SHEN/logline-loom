@@ -77,7 +77,9 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, auto_gate
     yield "\n\n".join(logs), brief, None, None, None, None
     screenplay, note, degraded = pipeline.call_agent(
         "screenwriter", brief,
-        "片约（c01_brief，artifact_id=%s）：\n%s\n\n请把它展开成完整剧本，按契约只输出一个 JSON 代码块。"
+        "片约（c01_brief，artifact_id=%s）：\n%s\n\n"
+        "请把它展开成完整剧本，**3–5 个场景**（太少撑不起叙事，太多后续生成不切实际），"
+        "按契约只输出一个 JSON 代码块。"
         % (brief["envelope"]["artifact_id"], json.dumps(brief["payload"], ensure_ascii=False, indent=2)),
         offline=offline)
     logs[-1] = "**② 编剧 Agent**：%s" % note
@@ -99,7 +101,9 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, auto_gate
     yield "\n\n".join(logs), brief, screenplay, None, None, None
     shotlist, note, _ = pipeline.call_agent(
         "storyboard", screenplay,
-        "剧本（c02_screenplay，artifact_id=%s，剧本确认关口已批准）：\n%s\n\n画幅锁定 %s。请把它拆成镜头清单，按契约只输出一个 JSON 代码块。"
+        "剧本（c02_screenplay，artifact_id=%s，剧本确认关口已批准）：\n%s\n\n"
+        "画幅锁定 %s。请把它拆成镜头清单，**6–8 个镜头**（每个镜头后续都要送 MiniMax-H3 真生成，"
+        "单镜头约 6–12 分钟，镜头过多整条管线跑不完），按契约只输出一个 JSON 代码块。"
         % (screenplay["envelope"]["artifact_id"], json.dumps(screenplay["payload"], ensure_ascii=False, indent=2), aspect),
         offline=offline)
     logs[-1] = "**③ 分镜 Agent**：%s" % note
@@ -108,10 +112,21 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, auto_gate
     # ④ 提示词
     logs.append("**④ 提示词 Agent**：正在写英文提示词…")
     yield "\n\n".join(logs), brief, screenplay, shotlist, None, None
+    # c03 已经给首镜定了 workflow_type，c04 必须沿用——分镜说 T2V 就不能自己改成 R2V，
+    # 否则参考图那一串字段会跟着错。
+    shots_c03 = (shotlist.get("payload") or {}).get("shots") or []
+    first_type = "T2V"
+    if shots_c03 and isinstance(shots_c03[0], dict):
+        first_type = shots_c03[0].get("workflow_type") or "T2V"
+
     genreq, note, _ = pipeline.call_agent(
         "prompt_writer", shotlist,
-        "镜头清单（c03_shotlist，artifact_id=%s）：\n%s\n\n请为每一镜生成英文提示词与时间码，按契约只输出一个 JSON 代码块。"
-        % (shotlist["envelope"]["artifact_id"], json.dumps(shotlist["payload"], ensure_ascii=False, indent=2)),
+        "镜头清单（c03_shotlist，artifact_id=%s）：\n%s\n\n"
+        "请为**第一个镜头（S001）**生成生成请求：英文提示词 + 时间码 + 节点 ID 映射。\n"
+        "⚠️ c04 契约的 payload 是**单个镜头对象**（required: shot_id / candidate_id / "
+        "workflow / generation / assets），**不是数组**——只输出这一个镜头的 JSON 代码块。\n"
+        "⚠️ 该镜头在 c03 里标注的 workflow_type 是 **%s**，必须沿用，不要改。"
+        % (shotlist["envelope"]["artifact_id"], json.dumps(shotlist["payload"], ensure_ascii=False, indent=2), first_type),
         offline=offline)
     logs[-1] = "**④ 提示词 Agent**：%s" % note
     yield "\n\n".join(logs), brief, screenplay, shotlist, genreq, None
@@ -120,16 +135,30 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, auto_gate
     logs.append("**⑤ 生成 Agent**：正在探测 Spark 上的 ComfyUI…")
     yield "\n\n".join(logs), brief, screenplay, shotlist, genreq, None
     res = pipeline.generation_step(genreq)
+    gallery = [(p, os.path.basename(p)) for p in res["shots"]]
     if res["mode"] == "live":
-        gallery = [(p, os.path.basename(p)) for p in res["shots"]]
         tail = "**⑤ 生成 Agent**：真生成完成（%s，prompt_id=%s）" % (res["note"], res.get("prompt_id", "-"))
+    elif res["mode"] == "live_async":
+        tail = ("**⑤ 生成 Agent**：已向 Spark 提交真生成任务\n\n"
+                "- %s\n- 探针：%s" % (res["note"], res["detail"]))
     else:
-        gallery = [(p, os.path.basename(p)) for p in res["shots"]]
         tail = ("**⑤ 生成 Agent**：⚠️ **本次为预生成回放**，不是实时生成。\n\n"
-                "- 原因：%s\n- 探针：%s\n%s" % (res["note"] or "隧道不可达", res["detail"],
-                                          ("- 素材说明：%s" % res["note"]) if res.get("note") else ""))
+                "- 原因：%s\n- 探针：%s" % (res["note"] or "隧道不可达", res["detail"]))
     logs[-1] = tail
     yield "\n\n".join(logs), brief, screenplay, shotlist, genreq, gallery
+
+
+def query_generation(prompt_id):
+    """取回已提交的真生成任务结果。"""
+    pid = (prompt_id or "").strip()
+    if not pid:
+        return "请填任务 ID（提交真生成后，状态栏会给出）。", None
+    r = generate.query_task(pid)
+    if r["status"] == "done":
+        return ("**真生成完成**（用时 %d 秒）：%s" % (r.get("elapsed", 0), r["detail"]),
+                [(r["path"], os.path.basename(r["path"]))])
+    label = {"queued": "排队中", "running": "生成中", "unknown": "未找到"}.get(r["status"], r["status"])
+    return "任务状态：**%s** — %s" % (label, r["detail"]), None
 
 
 def build_ui():
@@ -174,6 +203,18 @@ def build_ui():
         run_btn.click(run_pipeline,
                       inputs=[logline, duration, aspect, visual_style, audio_style, auto_gate, offline],
                       outputs=[status, c01, c02, c03, c04, gallery])
+
+        with gr.Accordion("查询生成任务（取回真生成视频）", open=False):
+            gr.Markdown(
+                "真生成跑在本地 DGX Spark 的 ComfyUI 上，MiniMax-H3 一个镜头要 6–12 分钟，"
+                "**不会同步等出片**——提交后立刻返回任务 ID，界面先给参考预览。"
+                "把任务 ID 粘进来就能查进度、取回成片。（容器重启会清空任务记录）")
+            with gr.Row():
+                task_id = gr.Textbox(label="任务 ID（prompt_id）", scale=3, placeholder="例：a1b2c3d4-...")
+                query_btn = gr.Button("查询", scale=1)
+            task_status = gr.Markdown("")
+            task_video = gr.Gallery(label="真生成结果", columns=2, height=260)
+            query_btn.click(query_generation, inputs=[task_id], outputs=[task_status, task_video])
 
         # 生成器逐段 yield 依赖队列；不开队列时界面会停在「等待输入…」不更新
         demo.queue(default_concurrency_limit=4)
