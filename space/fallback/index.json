@@ -1,0 +1,12 @@
+{
+  "note": "以下均为 LOOM 管线上已生成的镜头（MiniMax-H3，跑在 NVIDIA DGX Spark 上，5 秒 / 24fps / 含原生音频）。仅用于真生成后端不可达时的回放演示，界面会明确标注「本次为预生成回放」。",
+  "source": "clips/clips/*.mp4（2026-09-06 生成批次）",
+  "shots": [
+    { "file": "shot01.mp4", "label": "镜头 01" },
+    { "file": "shot03.mp4", "label": "镜头 03" },
+    { "file": "shot05.mp4", "label": "镜头 05" },
+    { "file": "shot09.mp4", "label": "镜头 09" },
+    { "file": "shot12.mp4", "label": "镜头 12" },
+    { "file": "shot16.mp4", "label": "镜头 16" }
+  ]
+}

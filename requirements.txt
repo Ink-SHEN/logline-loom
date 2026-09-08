@@ -1,0 +1,3 @@
+gradio>=4.44.0
+jsonschema>=4.20.0
+requests>=2.31.0

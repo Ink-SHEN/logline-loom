@@ -105,3 +105,6 @@ contracts/validate_report.txt
 contracts/negative_test_report.txt
 workflows/preflight_report.txt
 workflows/verify_map_report.txt
+
+# 创空间回放素材必须入库（上面第 52 行 *.mp4 是全局忽略）
+!space/fallback/*.mp4
