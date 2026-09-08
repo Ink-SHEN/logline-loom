@@ -5,7 +5,9 @@
   "type": "module",
   "description": "LOOM 电影 Agent 流水线。agents/ 下全部为 ESM；本文件解除 docs/agent_guide.md 第十节记录的『.js export 语法错』阻塞项",
   "scripts": {
+    "studio": "node studio.mjs",
     "screenwriter": "node agents/screenwriter/run.js",
+    "render": "node tools/slideshow.mjs",
     "validate": "python contracts/validate_contract.py --selftest"
   }
 }

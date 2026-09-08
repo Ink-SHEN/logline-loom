@@ -30,7 +30,7 @@
 
 | 文件 | 动作 | 要点 |
 |---|---|---|
-| `agents/editor/prompt.js` | 新增 | 剪辑师人格 + **中间形状**输出模板（不是完整 c07——见设计 1）。脾气写进人格：靠镜头长短与接点控制呼吸、能硬切就硬切、转场只用在段落起止与情绪转折；**明确列出「你不做的事」**（不选候选 / 不填路径 / 不写字幕 / 不发明不重排），把可追溯字段挡在 LLM 之外。硬规则：in/out 是**源视频时间**且 `0 ≤ in < out ≤ source_duration`、最多一位小数、默认用满整段；transition 枚举 `cut/dissolve/fade_in/fade_out/none`（首 fade_in、尾 fade_out、中间默认 cut）；audio_mix 四值给数字、`loudness_target_lufs=-14`；**禁止输出 `measured_loudness_lufs`**（那是渲染后实测值） |
+| `agents/editor/prompt.js` | 新增 | 剪辑师人格 + **中间形状**输出模板（不是完整 c07——见设计 1）。脾气写进人格：靠镜头长短与接点控制呼吸、能硬切就硬切、转场只用在段落起止与情绪转折；**明确列出「你不做的事」**（不选候选 / 不填路径 / 不写字幕 / 不发明不重排），把可追溯字段挡在 LLM 之外。硬规则：in/out 是**源视频时间**且 `0 ≤ in < out ≤ source_duration`、最多一位小数、默认用满整段；transition 枚举 `cut/dissolve/fade_in/fade_out/none`（首 fade_in、尾 fade_out、中间默认 cut；dissolve = 本条自上一镜叠化入场，标在叠化两镜的**后一条**上——渲染工具 tools/slideshow.mjs 的 run 切分按同一口径，两处不许各改各的）；audio_mix 四值给数字、`loudness_target_lufs=-14`；**禁止输出 `measured_loudness_lufs`**（那是渲染后实测值） |
 | `agents/editor/sample.js` | 新增 | **最终 c07 形状的活文档**（离线降级不用它——见设计 8）：11 镜、每镜用满 6s、`final_output.duration_seconds=66` 恰为各片段 (out−in) 之和，内部自洽可直验；`sha256` 全 0 占位、`size_bytes` 为投影值，文件头注明渲染后回填；`gate` 有意留 pending。兼作下游（渲染 / 人工粗剪确认）mock 上游的现成输入 |
 | `agents/editor/sample_subtitles.json` | 复用（09-07 已在） | 字幕侧清单格式示例：键 = `shot_id`，值 = 字符串（整镜一条）或数组（多行逐条给 `at_seconds`）；`_默认` 带渲染样式（字体 / 字号 / 底边距 / 每行字数上限），`_` 前缀键当注释跳过；时间一律**源视频时间**，不是成片时间（理由见设计 5） |
 | `agents/editor/llm.js` | 新增 | **LLM API 接入**：第四份共享客户端副本（screenwriter / storyboard / prompt-writer / editor 各一份，README 约定共享管线最终落 `tools/` 时去重）。OpenAI Chat Completions 兼容、原生 fetch、零依赖；`LOOM_LLM_BASE_URL/API_KEY/MODEL` 配置，Key 回退识别 `MODELSCOPE_API_KEY/DASHSCOPE_API_KEY/OPENAI_API_KEY`，默认魔搭 API-Inference；只对 429/5xx/网络错误退避重试 |
