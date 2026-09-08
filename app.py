@@ -175,6 +175,9 @@ def build_ui():
                       inputs=[logline, duration, aspect, visual_style, audio_style, auto_gate, offline],
                       outputs=[status, c01, c02, c03, c04, gallery])
 
+        # 生成器逐段 yield 依赖队列；不开队列时界面会停在「等待输入…」不更新
+        demo.queue(default_concurrency_limit=4)
+
         gr.Markdown("""
 ---
 ### 七站是怎么分的（创空间里跑 ①–⑤，⑥⑦ 仍在本地节点）
