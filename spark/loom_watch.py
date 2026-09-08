@@ -94,36 +94,40 @@ def current_url():
     return hits[-1].rstrip(",;") if hits else ""
 
 
-def report(base, token, url):
-    """把当前地址告诉创空间。成功返回说明文字，失败返回 None。"""
-    if not base or not url:
+def report(api_base, ms_token, token, url):
+    """把当前地址告诉创空间。成功返回说明文字，失败返回 None。
+
+    走 Gradio 的 API 通道（/gradio_api/run/report_tunnel）：
+    魔搭网关只放行 /gradio_api/*，自定义 HTTP 路由从外面调不到。
+    代价是这个通道要魔搭 token 鉴权——所以 LOOM_MS_TOKEN 留空就跳过自动上报，
+    地址照样写进 tunnel_url 文件，人工抄到 secrets 里一样能用。
+    """
+    if not api_base or not url or not ms_token:
         return None
-    payload = json.dumps({"token": token, "url": url, "ts": int(time.time())}).encode("utf-8")
-    for endpoint in ("/loom/tunnel/report", "/loom/tunnel/report/"):
-        req = urllib.request.Request(
-            base.rstrip("/") + endpoint, data=payload, method="POST",
-            headers={"Content-Type": "application/json"})
-        try:
-            with urllib.request.urlopen(req, timeout=15) as r:
-                body = r.read().decode("utf-8", "replace")[:200]
-                if r.status == 200 and '"ok"' in body:
-                    return "已上报（%s）" % endpoint
-        except urllib.error.HTTPError as e:
-            last = "HTTP %s" % e.code
-        except Exception as e:
-            last = str(e)
-        else:
-            last = "响应异常"
+    payload = json.dumps({"data": [url, token]}).encode("utf-8")
+    req = urllib.request.Request(
+        api_base.rstrip("/") + "/gradio_api/run/report_tunnel", data=payload, method="POST",
+        headers={"Content-Type": "application/json", "Authorization": "Bearer %s" % ms_token})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            if r.status == 200:
+                return "已上报（gradio_api/run/report_tunnel）"
+    except urllib.error.HTTPError as e:
+        log("上报失败：HTTP %s" % e.code)
+    except Exception as e:
+        log("上报失败：%s" % e)
     return None
 
 
 def main():
     env = load_env()
     token = env.get("LOOM_PROXY_TOKEN") or ""
-    base = env.get("LOOM_SPACE_URL") or "https://www.modelscope.cn/studios/Incion/LOOM"
+    ms_token = env.get("LOOM_MS_TOKEN") or ""
+    api_base = env.get("LOOM_SPACE_API") or ""
     last_url, last_report = "", 0
 
-    log("守护启动：space=%s  每 %ss 检查一次" % (base, CHECK_INTERVAL))
+    log("守护启动：自动上报=%s  每 %ss 检查一次"
+        % ("开" if ms_token else "关（未填 LOOM_MS_TOKEN）", CHECK_INTERVAL))
     while True:
         try:
             if not natapp_running():
@@ -139,12 +143,18 @@ def main():
 
             now = time.time()
             if url and (not last_report or now - last_report > REPORT_INTERVAL):
-                ok = report(base, token, url)
+                ok = report(api_base, ms_token, token, url)
+                if not ms_token:
+                    err = "未启用自动上报（LOOM_MS_TOKEN 为空）——地址已写入 tunnel_url，可手动填进创空间 secrets"
+                elif ok:
+                    err = ""
+                else:
+                    err = "上报失败（创空间可能在重建，或 token 无效）"
                 state = {
                     "url": url,
                     "reported_at": int(now),
-                    "channel": "modelscope-studio" if ok else "",
-                    "last_error": "" if ok else "上报失败（创空间可能未部署该端点或正在休眠）",
+                    "channel": "gradio_api" if ok else "",
+                    "last_error": err,
                 }
                 with open(STATE_FILE, "w", encoding="utf-8") as f:
                     json.dump(state, f, ensure_ascii=False, indent=1)

@@ -42,6 +42,17 @@ def tunnel_status(force=False):
     return tunnel.status_lines()
 
 
+def tunnel_report(url, token):
+    """收下 Spark 上报的隧道地址。
+
+    为什么做成 Gradio 函数而不是普通 HTTP 路由：魔搭的网关只放行 /gradio_api/*，
+    自定义 FastAPI 路由从外面调不到（实测 404/405）。所以借 Gradio 自己的 API 通道，
+    用 api_name="report_tunnel" 暴露成 /gradio_api/run/report_tunnel。
+    """
+    ok, msg = tunnel.save_reported(url, token)
+    return ("✅ %s" if ok else "⛔ %s") % msg
+
+
 def _mount_tunnel_api(demo):
     """挂两个 HTTP 端点，让 Spark 能把「当前隧道地址」主动报过来。
 
@@ -254,6 +265,17 @@ def build_ui():
             with gr.Row():
                 refresh_tunnel_btn = gr.Button("重新解析隧道地址", scale=1)
             refresh_tunnel_btn.click(lambda: tunnel_status(force=True), outputs=[tunnel_md])
+
+            # 上报端点：Gradio 会自动把它暴露成 /gradio_api/run/report_tunnel，
+            # Spark 上的 loom_watch.py 就调这个把新地址送过来。组件设成不可见——
+            # 它是给机器用的，不是给人点的。
+            with gr.Row(visible=False):
+                rep_url = gr.Textbox()
+                rep_token = gr.Textbox()
+                report_btn = gr.Button()
+            rep_out = gr.Markdown(visible=False)
+            report_btn.click(tunnel_report, inputs=[rep_url, rep_token], outputs=[rep_out],
+                             api_name="report_tunnel")
 
         with gr.Accordion("查询生成任务（取回真生成视频）", open=False):
             gr.Markdown(
