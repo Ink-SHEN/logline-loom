@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOOM 本地使用指南 · 在自己电脑上把一句话跑成一部片</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --ink:#1a1d24; --ink2:#5b6472; --ink3:#8a94a3;
+    --line:#e6e9ee; --line2:#d7dce4;
+    --violet:#534ab7; --violet-bg:#eeedfe; --violet-line:#d7d3f5;
+    --teal:#0f6e56; --teal-bg:#e1f5ee; --teal-line:#b5e6d3;
+    --amber:#854f0b; --amber-bg:#faeeda; --amber-line:#efdcb0;
+    --red:#a32d2d; --red-bg:#fcebeb; --red-line:#f4caca;
+    --blue:#185fa5; --blue-bg:#e6f1fb;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.7;font-size:15px}
+  .wrap{max-width:900px;margin:0 auto;padding:40px 20px 80px}
+
+  .hero{background:linear-gradient(135deg,#fff 0%,#f1effd 100%);border:1px solid var(--line);border-radius:20px;padding:38px 40px;margin-bottom:34px}
+  .badge{display:inline-flex;align-items:center;gap:7px;background:var(--violet-bg);color:var(--violet);border:1px solid var(--violet-line);font-size:13px;font-weight:600;padding:4px 12px;border-radius:999px;margin-bottom:16px}
+  .badge .dot{width:7px;height:7px;border-radius:50%;background:var(--violet)}
+  h1{font-size:29px;font-weight:700;letter-spacing:-.5px;margin-bottom:10px}
+  .hero p.sub{color:var(--ink2);font-size:16px;max-width:680px}
+  .hero .urlbar{margin-top:22px;background:#1e2230;border:1px solid #2c3245;border-radius:12px;padding:14px 18px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;color:#d6e2ff;word-break:break-all}
+  .hero .urlbar b{color:#7ef0c0;font-weight:600}
+
+  section{margin-bottom:48px}
+  .sec-h{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .sec-num{width:34px;height:34px;border-radius:10px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;flex-shrink:0}
+  .sec-num.violet{background:var(--violet)} .sec-num.teal{background:var(--teal)}
+  .sec-num.amber{background:var(--amber)} .sec-num.blue{background:var(--blue)} .sec-num.red{background:var(--red)}
+  h2{font-size:22px;font-weight:700}
+  h3{font-size:16px;font-weight:700;margin:24px 0 10px}
+  .lead{color:var(--ink2);margin-bottom:10px}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-bottom:14px}
+  .steps{counter-reset:step}
+  .step{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px 18px 58px;margin-bottom:12px}
+  .step::before{counter-increment:step;content:counter(step);position:absolute;left:18px;top:18px;width:26px;height:26px;border-radius:50%;background:var(--violet-bg);color:var(--violet);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;border:1px solid var(--violet-line)}
+  .step b{font-size:15px}
+  .step p{color:var(--ink2);font-size:14px;margin-top:4px}
+
+  .tip{display:flex;gap:12px;background:var(--blue-bg);border:1px solid #c7dcf2;border-radius:12px;padding:14px 16px;margin:12px 0;font-size:14px}
+  .warn{display:flex;gap:12px;background:var(--red-bg);border:1px solid var(--red-line);border-radius:12px;padding:14px 16px;margin:12px 0;font-size:14px;color:#6e1f1f}
+  .ok{display:flex;gap:12px;background:var(--teal-bg);border:1px solid var(--teal-line);border-radius:12px;padding:14px 16px;margin:12px 0;font-size:14px;color:#085041}
+
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:14px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#fbfbfc;font-weight:600;color:var(--ink2);font-size:13px}
+  tr:last-child td{border-bottom:none}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;background:#f1f2f5;padding:1px 6px;border-radius:5px;color:var(--ink)}
+  td code{white-space:nowrap}
+
+  pre.term{background:#1e2230;color:#d6e2ff;border-radius:12px;padding:16px 18px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.65;overflow-x:auto;margin:10px 0 4px;white-space:pre}
+  pre.term .c{color:#7d8aa8}      /* 注释 */
+  pre.term .g{color:#7ef0c0}      /* 成功 */
+  pre.term .y{color:#ffd479}      /* 强调/关口 */
+  pre.term b{color:#fff;font-weight:600}
+
+  .cmd{display:flex;align-items:center;gap:10px;background:#1e2230;border-radius:10px;padding:11px 14px;margin:8px 0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:#d6e2ff;overflow-x:auto;white-space:nowrap}
+  .cmd .tag{flex-shrink:0;background:#31395a;color:#9fb4ee;font-weight:600;padding:2px 9px;border-radius:6px;font-size:11.5px;font-family:-apple-system,"PingFang SC",sans-serif}
+
+  .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  @media(max-width:680px){.three{grid-template-columns:1fr}}
+  .mode{border-radius:14px;padding:16px 18px;border:1px solid}
+  .mode h4{font-size:14.5px;display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .mode p{font-size:13px;color:var(--ink)}
+  .mode .fl{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#fff;border:1px solid;padding:1px 7px;border-radius:5px;display:inline-block;margin-bottom:6px}
+  .mode.reh{background:var(--blue-bg);border-color:#c7dcf2} .mode.reh h4{color:var(--blue)} .mode.reh .fl{color:var(--blue);border-color:#c7dcf2}
+  .mode.dry{background:var(--amber-bg);border-color:var(--amber-line)} .mode.dry h4{color:var(--amber)} .mode.dry .fl{color:var(--amber);border-color:var(--amber-line)}
+  .mode.real{background:var(--teal-bg);border-color:var(--teal-line)} .mode.real h4{color:var(--teal)} .mode.real .fl{color:var(--teal);border-color:var(--teal-line)}
+
+  /* 时间条 */
+  .bars{margin:14px 0}
+  .bar-row{display:grid;grid-template-columns:210px 1fr 110px;gap:10px;align-items:center;margin-bottom:9px;font-size:13.5px}
+  @media(max-width:640px){.bar-row{grid-template-columns:130px 1fr 90px}}
+  .bar{height:18px;border-radius:6px;background:#e9ebf0;position:relative;overflow:hidden}
+  .bar i{position:absolute;inset:0 auto 0 0;border-radius:6px;display:block}
+  .bar.cold i{background:linear-gradient(90deg,#b3474e,#d96c62)}
+  .bar.hot i{background:linear-gradient(90deg,#c07a1f,#e0a34a)}
+  .bar.llm i{background:linear-gradient(90deg,#534ab7,#8a80e0)}
+  .bar.cach i{background:linear-gradient(90deg,#0f6e56,#2fa07f)}
+  .bar-val{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:var(--ink2);text-align:right}
+
+  .tree{background:#fbfbfc;border:1px solid var(--line);border-radius:12px;padding:16px 18px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.9;overflow-x:auto;white-space:pre}
+  .tree .d{color:var(--violet);font-weight:600}
+  .tree .c{color:var(--ink3)}
+  .tree .warn{all:unset;color:var(--red);font-weight:600}
+
+  .footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--line);color:var(--ink3);font-size:13px;text-align:center}
+  ol li,ul li{margin-bottom:8px}
+  ul{padding-left:20px}
+  .svgbox{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 16px;margin:14px 0}
+  .svgbox .cap{text-align:center;color:var(--ink3);font-size:13px;margin-top:10px}
+  @media(max-width:720px){.svgbox svg{width:100%;height:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="badge"><span class="dot"></span>LOOM 电影 Agent · 本地使用指南</div>
+    <h1>在自己电脑上，把一句话跑成一部片</h1>
+    <p class="sub">这份指南面向「clone 了 LOOM 仓库、想在本地把它跑起来」的人。全程大白话：哪条命令敲下去会发生什么、屏幕上会打出什么、什么时候轮到你出手。不烧一卡一瓦的部分先彩排，烧 GPU 的部分最后再上。</p>
+    <div class="urlbar"><b>$</b> node studio.mjs --logline "你的故事，20–400 字"</div>
+  </div>
+
+  <!-- 1 全景 -->
+  <section>
+    <div class="sec-h"><div class="sec-num violet">1</div><h2>先看全景：这条流水线长什么样</h2></div>
+    <p class="lead">把 LOOM 想成一条<b>小工厂流水线</b>：7 个「工人」（Agent）排成一排，每人只干自己的那道工序，干完把半成品（一份 JSON 交接单）传给下一位。流水线上有 <b>2 道只有你能签的「放行闸」</b>——机器不会替你签字，你没签字流水线就停在那等你。</p>
+
+    <div class="svgbox">
+      <svg viewBox="0 0 940 300" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'PingFang SC','Microsoft YaHei',sans-serif">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#9aa3b5"/>
+          </marker>
+          <marker id="arR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#c25a4a"/>
+          </marker>
+        </defs>
+
+        <!-- 第一行 -->
+        <!-- 你 -->
+        <rect x="10" y="46" width="96" height="52" rx="12" fill="#1a1d24"/>
+        <text x="58" y="68" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">你</text>
+        <text x="58" y="86" text-anchor="middle" fill="#aab2c5" font-size="10.5">写一句话故事</text>
+
+        <line x1="106" y1="72" x2="136" y2="72" stroke="#9aa3b5" stroke-width="2" marker-end="url(#ar)"/>
+
+        <!-- ①编剧 -->
+        <rect x="140" y="46" width="104" height="52" rx="12" fill="#eeedfe" stroke="#d7d3f5"/>
+        <text x="192" y="68" text-anchor="middle" fill="#3c3489" font-size="14" font-weight="700">① 编剧</text>
+        <text x="192" y="86" text-anchor="middle" fill="#7a72c9" font-size="10.5">扩写成剧本</text>
+
+        <line x1="244" y1="72" x2="274" y2="72" stroke="#9aa3b5" stroke-width="2" marker-end="url(#ar)"/>
+
+        <!-- 关口1 -->
+        <rect x="278" y="34" width="96" height="76" rx="12" fill="#faeeda" stroke="#e8b45a" stroke-width="2"/>
+        <text x="326" y="60" text-anchor="middle" fill="#854f0b" font-size="14" font-weight="700">★ 关口 1</text>
+        <text x="326" y="78" text-anchor="middle" fill="#a3701f" font-size="10.5">剧本确认</text>
+        <text x="326" y="94" text-anchor="middle" fill="#a3701f" font-size="10.5">只有你能批</text>
+
+        <line x1="374" y1="72" x2="404" y2="72" stroke="#9aa3b5" stroke-width="2" marker-end="url(#ar)"/>
+
+        <!-- ②分镜 -->
+        <rect x="408" y="46" width="104" height="52" rx="12" fill="#e6f1fb" stroke="#c4d9ee"/>
+        <text x="460" y="68" text-anchor="middle" fill="#0c447c" font-size="14" font-weight="700">② 分镜</text>
+        <text x="460" y="86" text-anchor="middle" fill="#5f86ab" font-size="10.5">拆成一个个镜头</text>
+
+        <line x1="512" y1="72" x2="542" y2="72" stroke="#9aa3b5" stroke-width="2" marker-end="url(#ar)"/>
+
+        <!-- ③提示词 -->
+        <rect x="546" y="46" width="104" height="52" rx="12" fill="#e6f1fb" stroke="#c4d9ee"/>
+        <text x="598" y="68" text-anchor="middle" fill="#0c447c" font-size="14" font-weight="700">③ 提示词</text>
+        <text x="598" y="86" text-anchor="middle" fill="#5f86ab" font-size="10.5">写生成指令</text>
+
+        <line x1="650" y1="72" x2="680" y2="72" stroke="#9aa3b5" stroke-width="2" marker-end="url(#ar)"/>
+
+        <!-- ④生成 -->
+        <rect x="684" y="34" width="122" height="76" rx="12" fill="#fdece6" stroke="#e8926a" stroke-width="1.6"/>
+        <text x="745" y="60" text-anchor="middle" fill="#7c2d10" font-size="14" font-weight="700">④ 生成 🔥</text>
+        <text x="745" y="78" text-anchor="middle" fill="#a85a33" font-size="10.5">发给 ComfyUI 真出视频</text>
+        <text x="745" y="94" text-anchor="middle" fill="#a85a33" font-size="10.5">唯一烧 GPU 的工位</text>
+
+        <!-- ④ -> ⑤ 下行 -->
+        <line x1="745" y1="110" x2="745" y2="152" stroke="#9aa3b5" stroke-width="2" marker-end="url(#ar)"/>
+
+        <!-- 第二行 -->
+        <!-- ⑤质检 -->
+        <rect x="684" y="156" width="122" height="52" rx="12" fill="#e1f5ee" stroke="#b5e6d3"/>
+        <text x="745" y="178" text-anchor="middle" fill="#085041" font-size="14" font-weight="700">⑤ 质检</text>
+        <text x="745" y="196" text-anchor="middle" fill="#4f8f7d" font-size="10.5">量尺寸 + 看内容</text>
+
+        <!-- ⑤ fail -> ⑥ -->
+        <line x1="684" y1="182" x2="560" y2="182" stroke="#c25a4a" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arR)"/>
+        <text x="622" y="172" text-anchor="middle" fill="#c25a4a" font-size="11" font-weight="600">不合格</text>
+
+        <!-- ⑥重试 -->
+        <rect x="436" y="156" width="120" height="52" rx="12" fill="#fcebeb" stroke="#f4caca"/>
+        <text x="496" y="178" text-anchor="middle" fill="#8f2323" font-size="14" font-weight="700">⑥ 重试</text>
+        <text x="496" y="196" text-anchor="middle" fill="#b26a6a" font-size="10.5">换个种子再试（≤3 次）</text>
+
+        <!-- ⑥ -> ④ 回环：从 ⑥ 顶部上行，右行到 ④ 正下方，再顶入 ④ 底边（避开 ④→⑤ 的下行箭头 x=745） -->
+        <path d="M 496 156 L 496 128 L 710 128 L 710 116" fill="none" stroke="#c25a4a" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arR)"/>
+        <text x="600" y="120" text-anchor="middle" fill="#c25a4a" font-size="11" font-weight="600">带着新指令回来重生成</text>
+
+        <!-- ⑤ pass -> ⑦ -->
+        <line x1="806" y1="182" x2="836" y2="182" stroke="#9aa3b5" stroke-width="2" marker-end="url(#ar)"/>
+        <text x="821" y="172" text-anchor="middle" fill="#0f6e56" font-size="11" font-weight="600">合格</text>
+
+        <!-- ⑦剪辑 -->
+        <rect x="840" y="156" width="88" height="52" rx="12" fill="#eeedfe" stroke="#d7d3f5"/>
+        <text x="884" y="178" text-anchor="middle" fill="#3c3489" font-size="14" font-weight="700">⑦ 剪辑</text>
+        <text x="884" y="196" text-anchor="middle" fill="#7a72c9" font-size="10.5">排片子出决策</text>
+
+        <!-- 关口2 + 成片（第三行右下） -->
+        <path d="M 884 208 L 884 246" stroke="#9aa3b5" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+        <rect x="826" y="250" width="96" height="40" rx="10" fill="#faeeda" stroke="#e8b45a" stroke-width="2"/>
+        <text x="874" y="268" text-anchor="middle" fill="#854f0b" font-size="12" font-weight="700">★ 关口 2</text>
+        <text x="874" y="282" text-anchor="middle" fill="#a3701f" font-size="9.5">粗剪确认·只有你能批</text>
+        <line x1="826" y1="270" x2="810" y2="270" stroke="#9aa3b5" stroke-width="2" marker-end="url(#ar)"/>
+        <rect x="700" y="250" width="104" height="40" rx="10" fill="#1a1d24"/>
+        <text x="752" y="268" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700">🎬 成片 MP4</text>
+        <text x="752" y="283" text-anchor="middle" fill="#aab2c5" font-size="9.5">deliverables/</text>
+
+        <!-- 图例 -->
+        <rect x="16" y="250" width="14" height="14" rx="4" fill="#faeeda" stroke="#e8b45a"/>
+        <text x="36" y="262" fill="#5b6472" font-size="11.5">人工关口：停下来等你签字</text>
+        <rect x="16" y="274" width="14" height="14" rx="4" fill="none" stroke="#c25a4a" stroke-dasharray="4 3"/>
+        <text x="36" y="286" fill="#5b6472" font-size="11.5">④⑤⑥ 是一个自动回环：不合格的镜头换个种子重新生成，最多 3 轮</text>
+      </svg>
+      <div class="cap">图 1 · LOOM 流水线全景：实线是正常流向，虚线红字是「不合格打回重做」的回环</div>
+    </div>
+
+    <p class="lead">你真正要做的事只有四种：</p>
+    <ol>
+      <li><b>写一句话故事</b>（起点，也是天花板——写得越具体，后面越像那么回事）</li>
+      <li><b>在两道关口上签字</b>（剧本好不好、粗剪行不行，机器不替你判断）</li>
+      <li><b>照着屏幕提示敲续跑命令</b>（每站跑完都会把下一条命令打印出来）</li>
+      <li><b>等着收成片</b></li>
+    </ol>
+  </section>
+
+  <!-- 2 准备 -->
+  <section>
+    <div class="sec-h"><div class="sec-num teal">2</div><h2>跑之前：装什么、哪台机器干什么活</h2></div>
+
+    <h3>2.1 你的电脑上要装的东西</h3>
+    <table>
+      <tr><th style="width:30%">想干什么</th><th>需要装什么</th></tr>
+      <tr><td>把仓库 clone 下来先验个货</td><td><b>Python 3</b>（装完执行 <code>pip install jsonschema</code>），然后跑一次 <code>python contracts/validate_contract.py --selftest</code>，看到 7 份示例全 <b>[通过]</b> 就说明仓库完好</td></tr>
+      <tr><td>跑流水线（必装）</td><td><b>Node.js 18 或更新</b>（命令行敲 <code>node -v</code> 能出版本号就行）。LOOM 的代码零第三方依赖，不用 <code>npm install</code></td></tr>
+      <tr><td>让 ①②③⑦ 真的动脑子写东西（可选）</td><td>一个大模型 API Key。默认用<b>魔搭 API-Inference</b>：<code>export MODELSCOPE_API_KEY="ms-xxxx"</code>（Git Bash 写法）。也认 <code>DASHSCOPE_API_KEY</code> / <code>OPENAI_API_KEY</code>，可用 <code>LOOM_LLM_MODEL</code> 换模型。不配也行——加 <code>--offline</code> 会用内置示例顶上</td></tr>
+      <tr><td>渲染成片 MP4（可选）</td><td><b>ffmpeg</b>（要带 libass；烧中文字幕需要渲染机装中文字体，否则字幕变方块）。Windows 可 <code>winget install ffmpeg</code></td></tr>
+      <tr><td>真生成视频（可选，最重的一步）</td><td>一台跑着 <b>ComfyUI 0.34.0 + MiniMax-H3 权重（约 63 GB）</b>的机器（README 第四节有完整清单）。没有它，流水线照样能跑到「生成提交计划」为止</td></tr>
+    </table>
+
+    <h3>2.2 活都发生在哪台机器上</h3>
+    <div class="svgbox">
+      <svg viewBox="0 0 900 250" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'PingFang SC','Microsoft YaHei',sans-serif">
+        <defs>
+          <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#9aa3b5"/>
+          </marker>
+        </defs>
+        <!-- 你的电脑 -->
+        <rect x="20" y="30" width="380" height="190" rx="16" fill="#eeedfe" stroke="#d7d3f5"/>
+        <text x="210" y="62" text-anchor="middle" fill="#3c3489" font-size="16" font-weight="700">你的电脑（日常这台）</text>
+        <rect x="45" y="84" width="330" height="58" rx="10" fill="#fff" stroke="#d7d3f5"/>
+        <text x="210" y="108" text-anchor="middle" fill="#3c3489" font-size="13" font-weight="600">Node.js：编排器 studio.mjs</text>
+        <text x="210" y="127" text-anchor="middle" fill="#7a72c9" font-size="11">调度 7 个工位 · 每站落盘前自动过契约校验</text>
+        <rect x="45" y="152" width="330" height="52" rx="10" fill="#fff" stroke="#d7d3f5"/>
+        <text x="210" y="174" text-anchor="middle" fill="#3c3489" font-size="13" font-weight="600">①②③⑤⑦ 的「脑子」在云端 LLM</text>
+        <text x="210" y="192" text-anchor="middle" fill="#7a72c9" font-size="11">写剧本/分镜/提示词/审片/排片，几个 API 调用而已</text>
+
+        <!-- Spark -->
+        <rect x="500" y="30" width="380" height="190" rx="16" fill="#fdece6" stroke="#f0c4ae"/>
+        <text x="690" y="62" text-anchor="middle" fill="#7c2d10" font-size="16" font-weight="700">生成机（DGX Spark）</text>
+        <rect x="525" y="84" width="330" height="58" rx="10" fill="#fff" stroke="#f0c4ae"/>
+        <text x="690" y="108" text-anchor="middle" fill="#7c2d10" font-size="13" font-weight="600">ComfyUI + MiniMax-H3 权重（63 GB）</text>
+        <text x="690" y="127" text-anchor="middle" fill="#a85a33" font-size="11">收到提示词 → 一镜一镜真渲染出带声音的视频</text>
+        <rect x="525" y="152" width="330" height="52" rx="10" fill="#fff" stroke="#f0c4ae"/>
+        <text x="690" y="174" text-anchor="middle" fill="#7c2d10" font-size="13" font-weight="600">只在第 ④ 步被用到</text>
+        <text x="690" y="192" text-anchor="middle" fill="#a85a33" font-size="11">通过 SSH 隧道访问，没有任何公网暴露</text>
+
+        <!-- 双向箭头 -->
+        <line x1="400" y1="105" x2="500" y2="105" stroke="#9aa3b5" stroke-width="2" marker-end="url(#ar2)"/>
+        <text x="450" y="92" text-anchor="middle" fill="#5b6472" font-size="11" font-weight="600">提示词 c04 →</text>
+        <line x1="500" y1="150" x2="400" y2="150" stroke="#9aa3b5" stroke-width="2" marker-end="url(#ar2)"/>
+        <text x="450" y="170" text-anchor="middle" fill="#5b6472" font-size="11" font-weight="600">← 视频文件 c05</text>
+      </svg>
+      <div class="cap">图 2 · 平时只占用你的笔记本；只有第 ④ 步才需要生成机在线</div>
+    </div>
+
+    <div class="tip"><div>💡</div><div><b>没有 Spark 也能玩。</b>流水线的每一站都可以单独跑、单独看产物。先彩排（下一节），把剧本、分镜、提示词这些「不花钱的部分」跑顺，最后再决定要不要上真生成。</div></div>
+  </section>
+
+  <!-- 3 三种模式 -->
+  <section>
+    <div class="sec-h"><div class="sec-num amber">3</div><h2>三种跑法：先彩排，再开演</h2></div>
+    <p class="lead">同样是 <code>node studio.mjs …</code>，加两个开关就是完全不同的「火力档位」：</p>
+    <div class="three">
+      <div class="mode reh">
+        <span class="fl">--offline</span>
+        <h4>彩排模式</h4>
+        <p>不调大模型：剧本、分镜用内置示例顶上，管线照走、产物照存。<b>用来熟悉流程、检查环境</b>，产物是「占位样品」不是创作。</p>
+      </div>
+      <div class="mode dry">
+        <span class="fl">--dry-run</span>
+        <h4>后厨看单模式</h4>
+        <p>提示词是真的，但第 ④ 步<b>只打印「我打算提交什么」的清单，不真的发给 GPU</b>。上真生成前用它过目一遍点菜单。</p>
+      </div>
+      <div class="mode real">
+        <span class="fl">都不加</span>
+        <h4>正片模式</h4>
+        <p>大模型真写、GPU 真渲染、质检真判、不合格真打回重做。<b>烧时间也烧电，建议小样先跑。</b></p>
+      </div>
+    </div>
+    <div class="ok"><div>✅</div><div>两个开关都不烧 GPU、不要 API Key，可以随便组合：<code>--offline</code> 管的是 ①②③⑤⑦ 用不用大模型，<code>--dry-run</code> 管的是 ④ 发不发 GPU。</div></div>
+  </section>
+
+  <!-- 4 三分钟彩排 -->
+  <section>
+    <div class="sec-h"><div class="sec-num violet">4</div><h2>三分钟彩排：不烧 GPU、不要 API Key，跑通全流程</h2></div>
+    <p class="lead">打开终端（Windows 建议 Git Bash），进到仓库目录，照抄三步。跑完你对整条流水线就心里有数了。</p>
+
+    <div class="steps">
+      <div class="step"><b>起步：交一句话故事</b>
+        <div class="cmd"><span class="tag">终端 1</span>node studio.mjs --logline "一位独自值守射电望远镜的夜班技师，在最后一个班次收到一段来自自己未来的信号。" --offline</div>
+        <p>它会跑完 ①编剧，然后把剧本存到 <code>artifacts/screenplay_时间戳.json</code>，紧接着<b>停下一块写着「强制人工关口 1」的大牌子</b>，并把批准命令原样打印给你。这不是卡住了，是设计如此。</p>
+        <pre class="term">──────────────────────────────
+ 强制人工关口 1：剧本确认（c02）
+ 剧本：artifacts/screenplay_20260909xxxxxx.json
+
+ 1. 读剧本 → 2. 满意就批准（只有人能批）：
+    <span class="y">node studio.mjs --approve artifacts/screenplay_20260909xxxxxx.json --reviewer 你的名字</span>
+ 3. 批准后从 ② 续跑：
+    <span class="y">node studio.mjs --from 2</span>
+──────────────────────────────</pre>
+      </div>
+
+      <div class="step"><b>签第一道关口：读剧本，批或不批</b>
+        <p>先用编辑器打开 <code>artifacts/screenplay_时间戳.json</code> 看一眼（彩排模式下是一份示例剧本，正片模式下是大模型写的）。满意就照抄刚才打印的命令：</p>
+        <div class="cmd"><span class="tag">终端 2</span>node studio.mjs --approve artifacts/screenplay_20260909xxxxxx.json --reviewer 你的名字</div>
+        <p>你的名字会被永久写进这份文件的 <code>gate.reviewer</code> 字段——<b>谁批的，账上永远查得到</b>。批准后它会立刻再跑一遍契约校验，看到 <span class="mono">[通过]</span> 才算数。不批就回去改剧本重新来，别手工改 JSON 里的状态——机器只认 <code>--approve</code> 这条通道。</p>
+      </div>
+
+      <div class="step"><b>续跑：一路冲到「生成提交计划」为止</b>
+        <div class="cmd"><span class="tag">终端 1</span>node studio.mjs --from 2 --offline --dry-run</div>
+        <p><code>--from 2</code> = 从第 ② 站接着跑；<code>--dry-run</code> = 第 ④ 站只出「提交计划」不碰 GPU。你会看到 ②分镜 → ③提示词 一站站过，最后打出「离线自检到此为止」——这就是<b>不花一分钱的整线自检终点</b>。此时 <code>artifacts/</code> 里已经有片约、剧本、分镜、提示词四样产物了。</p>
+        <pre class="term">[编排] ② 完成：artifacts/shotlist_20260909xxxxxx.json（离线示例降级）
+[编排] ③ 完成：artifacts/genreq_20260909xxxxxx/（6 份 c04）
+[编排] ④生成 是 --dry-run（只出提交计划，未 POST、未落 c05）——没有产物可质检，离线边界到此为止。</pre>
+      </div>
+    </div>
+    <div class="tip"><div>💡</div><div>每条命令跑完，终端都会打印<b>下一站的完整命令</b>（连着真实的文件路径），照抄就行，不需要记任何路径规则。</div></div>
+  </section>
+
+  <!-- 5 真出片 -->
+  <section>
+    <div class="sec-h"><div class="sec-num blue">5</div><h2>真出片：完整旅程（含两道关口）</h2></div>
+    <p class="lead">下面是「从一句话到成片 MP4」的完整 7 步。带 🔥 的步骤会烧 GPU 或调大模型，其他步骤都是本地秒级操作。</p>
+
+    <div class="steps">
+      <div class="step"><b>写一句好故事，正式起步</b>
+        <div class="cmd"><span class="tag">第 1 步</span>node studio.mjs --logline "你的故事" --duration 90 --candidates 2</div>
+        <p>第一次真跑建议像上面这样<b>把片子做小</b>：<code>--duration 90</code>（秒，60–300）+ <code>--candidates 2</code>（每镜候选数，默认 3）。镜头少一半，时间和电费也少一半。可选输入还有 <code>--theme</code>（主题）、<code>--visual-style</code>（视觉风格）、<code>--audio-style</code>（声音风格）、<code>--character</code>（主角设定）、<code>--red-lines</code>（红线，绝对不能出现的内容）。没配 API Key 就加 <code>--offline</code>。</p>
+      </div>
+
+      <div class="step"><b>关口 1：读剧本 → 批准</b>
+        <div class="cmd"><span class="tag">第 2 步</span>node studio.mjs --approve artifacts/screenplay_时间戳.json --reviewer 你的名字</div>
+        <p>这一步是全片质量的根。剧本不行，后面全是废片——<b>在这里多磨 10 分钟，能省 GPU 上几个小时</b>。</p>
+      </div>
+
+      <div class="step"><b>跑分镜和提示词（不烧 GPU，先看看要生成什么）</b>
+        <div class="cmd"><span class="tag">第 3 步</span>node studio.mjs --from 2 --until 3</div>
+        <p><code>--until 3</code> = 跑到第 ③ 站就停。这一步过后，<code>artifacts/genreq_时间戳/</code> 里躺着<b>每个镜头每个候选的一份生成指令</b>。想再稳一点，可以先看看点菜单：</p>
+        <div class="cmd"><span class="tag">可选</span>node studio.mjs --from 4 --genreq artifacts/genreq_时间戳/ --dry-run</div>
+      </div>
+
+      <div class="step"><b>接通生成机（有 Spark / 远程 GPU 的人才需要）</b>
+        <div class="cmd"><span class="tag">第 4 步</span>ssh -L 8188:127.0.0.1:8188 你的生成机</div>
+        <p>开一条 SSH 隧道，让本机的 <code>127.0.0.1:8188</code> 通到生成机上的 ComfyUI。ComfyUI <b>完全没有密码</b>，所以永远走隧道、地址不写进任何文件。如果生成机就在本机，这步跳过。</p>
+      </div>
+
+      <div class="step"><b>真生成：④⑤⑥ 自动回环，你去干别的</b>
+        <div class="cmd"><span class="tag">第 5 步 🔥</span>node studio.mjs --from 4 --genreq artifacts/genreq_时间戳/</div>
+        <p>接下来是全自动的：<b>④提交 → ⑤质检 → 不合格的 ⑥换个种子打回 ④ 重来</b>，最多 3 轮（<code>--max-retries</code> 可调）。每隔一会儿终端会打一行战报：</p>
+        <pre class="term">[编排] ——— 回环第 2 轮（重试批）：artifacts/genreq_retry_..._r1 ———
+[编排] ⑤ 质检：<span class="g">pass 5</span> · <span class="y">retry 1</span> · human 0（累积 artifacts/qc_20260909xxxxxx）</pre>
+        <p>质检分两层：<b>硬指标</b>（时长/帧率/分辨率/有没有音轨）用 ffprobe 机器量，模型一个字不参与；<b>内容项</b>（画面有没有走样、有没有碰红线）由视觉模型或人复核。谁都不许把「没看过」伪装成「合格」——这是这条流水线的底线。</p>
+      </div>
+
+      <div class="step"><b>⑦ 剪辑出决策单 + 自动渲一版审阅粗剪</b>
+        <p>回环收敛后 ⑦ 自动接手：从合格的候选里挑片、排顺序、定转场、配字幕，产出剪辑决策单 <code>artifacts/edit_时间戳.json</code>，并<b>当场渲染一版「审阅粗剪」MP4</b> 给你过目（需要 ffmpeg）。然后停在关口 2：</p>
+        <pre class="term">──────────────────────────────
+ 强制人工关口 2：粗剪确认（c07）
+ 审阅粗剪：deliverables/final_20260909xxxxxx.mp4
+
+ 1. 全组看过粗剪 → 2. 满意就批准（只有人能批）：
+    <span class="y">node studio.mjs --approve artifacts/edit_20260909xxxxxx.json --reviewer 你的名字</span>
+ 3. 批准后交付成片（不会再烧一遍）：
+    <span class="y">node studio.mjs --from render --edit artifacts/edit_20260909xxxxxx.json</span>
+──────────────────────────────</pre>
+        <p>把粗剪拖进播放器看。不满意就按屏幕提示把意见回给上游（换候选/改字幕），<b>别直接手改决策单</b>。</p>
+      </div>
+
+      <div class="step"><b>关口 2：签字 → 交付</b>
+        <div class="cmd"><span class="tag">第 6 步</span>node studio.mjs --approve artifacts/edit_时间戳.json --reviewer 你的名字 --reason "节奏可以，交付"</div>
+        <div class="cmd"><span class="tag">第 7 步</span>node studio.mjs --from render --edit artifacts/edit_时间戳.json</div>
+        <p>因为审阅粗剪在关口 2 之前就已经渲染并回填完毕，最后这一步<b>只做核验、不再重烧</b>，几秒钟收工。成片在 <code>deliverables/final_时间戳.mp4</code>——带字幕、混音和「AI 生成」标识（主赛道硬要求，跳不过去）。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">整个流程的命令清单（收藏用）</h3>
+      <pre class="term"><span class="c"># ① 起步（到关口 1 停）</span>
+node studio.mjs --logline "你的故事" --duration 90 --candidates 2
+<span class="c"># ★ 关口 1：读 artifacts/screenplay_*.json，批：</span>
+node studio.mjs --approve artifacts/screenplay_时间戳.json --reviewer 你的名字
+<span class="c"># ②③ 分镜+提示词（不烧 GPU）</span>
+node studio.mjs --from 2 --until 3
+<span class="c"># （可选）过目生成计划</span>
+node studio.mjs --from 4 --genreq artifacts/genreq_时间戳/ --dry-run
+<span class="c"># 🔥 ④⑤⑥ 真生成 + 质检回环 → ⑦ 剪辑 → 渲染审阅粗剪（到关口 2 停）</span>
+node studio.mjs --from 4 --genreq artifacts/genreq_时间戳/
+<span class="c"># ★ 关口 2：看 deliverables/final_*.mp4，批：</span>
+node studio.mjs --approve artifacts/edit_时间戳.json --reviewer 你的名字
+<span class="c"># 交付核验（秒级）</span>
+node studio.mjs --from render --edit artifacts/edit_时间戳.json</pre>
+    </div>
+  </section>
+
+  <!-- 6 时间预期 -->
+  <section>
+    <div class="sec-h"><div class="sec-num amber">6</div><h2>要等多久：把预期先说明白</h2></div>
+    <p class="lead">写剧本的几秒到几分钟，看片头的「冷启动」十分钟起步——<b>大部分等待都在 GPU 生成上，而且是正常的</b>。下面是实测基线（README 第六节，848×480 档位）：</p>
+    <div class="card">
+      <div class="bars">
+        <div class="bar-row"><span>LLM 工位（①②③⑦ 各一次）</span><div class="bar llm"><i style="width:6%"></i></div><span class="bar-val">数秒～2 分钟</span></div>
+        <div class="bar-row"><span>生成首次冷启动（含载 63GB 权重）</span><div class="bar cold"><i style="width:100%"></i></div><span class="bar-val">≈ 10.6 分钟</span></div>
+        <div class="bar-row"><span>热态 I2V 一个 5 秒镜头</span><div class="bar hot"><i style="width:34%"></i></div><span class="bar-val">≈ 3.6 分钟</span></div>
+        <div class="bar-row"><span>热态 I2V 一个 4 秒镜头</span><div class="bar hot"><i style="width:20%"></i></div><span class="bar-val">≈ 2.1 分钟</span></div>
+        <div class="bar-row"><span>输入完全相同（命中缓存）</span><div class="bar cach"><i style="width:2%"></i></div><span class="bar-val">0～1.4 秒</span></div>
+      </div>
+      <p style="font-size:13px;color:var(--ink2)">粗算一下：90 秒小样约 8–10 个镜头 × 2 候选 × 热态 2–4 分钟/个 ≈ <b>1–1.5 小时 GPU 时间</b>；首次还要加上 10 分钟冷启动。挂后台跑，人不用守着。</p>
+    </div>
+    <ul>
+      <li><b>为什么同一个镜头出多个候选必须换种子？</b>ComfyUI 会缓存完全相同的输入，0 秒把旧视频还给你。⑥重试 的主要工作就是换种子。</li>
+      <li><b>为什么 T2V/I2V/R2V 要分批跑？</b>三种工作流用不同权重（21 GB+），来回切换就得反复重载。②分镜 出的 <code>batch_plan</code> 就是干这个的。</li>
+      <li>防烧穿保险丝：<code>--max-retries</code>（默认 3）限制了回环轮数，质检判「重试次数耗尽」会转人工，绝不无限烧 GPU。</li>
+    </ul>
+  </section>
+
+  <!-- 7 东西存哪 -->
+  <section>
+    <div class="sec-h"><div class="sec-num teal">7</div><h2>东西都存哪了（以及一个 git 陷阱）</h2></div>
+    <div class="tree"><span class="d">LOOM/</span>
+├─ <span class="d">artifacts/</span>            <span class="c">← 全部中间产物（JSON 契约），文件名自带时间戳</span>
+│   ├─ brief_时间戳.json        <span class="c">你写的一句话故事（c01）</span>
+│   ├─ screenplay_时间戳.json   <span class="c">剧本（c02）★ 要你点批</span>
+│   ├─ shotlist_时间戳.json     <span class="c">分镜表（c03）</span>
+│   ├─ genreq_时间戳/           <span class="c">生成指令，每候选一份（c04）</span>
+│   ├─ genreq_retry_…_r2/       <span class="c">⑥重试 产出的新指令批</span>
+│   ├─ qc_时间戳/               <span class="c">质检报告（c06）</span>
+│   └─ edit_时间戳.json         <span class="c">剪辑决策单（c07）★ 要你点批</span>
+├─ <span class="d">shots/</span>                <span class="c">生成出来的镜头视频 + 参数快照 + 哈希（视频本身不入库）</span>
+├─ <span class="d">deliverables/</span>         <span class="c">成片 final_时间戳.mp4</span>
+└─ <span class="d">tmp/</span>                  <span class="c">渲染中间文件，成功自动清</span></div>
+    <div class="warn"><div>⚠️</div><div><b>git 陷阱：<code>artifacts/</code> 没有进 .gitignore。</b>试跑产生的中间产物不要 <code>git add -A</code> 一把梭提交进仓库。提交前先 <code>git status</code> 看清楚，只 add 你真的改的源码文件。</div></div>
+    <div class="tip"><div>💡</div><div>这套目录就是「可追溯」的兑现：<b>成片里任何一个镜头</b>，都能顺着 qc 报告 → 生成指令 → 分镜 → 剧本 一路反查回你最初那句话，连当时用的随机种子都记着。</div></div>
+  </section>
+
+  <!-- 8 参数速查 -->
+  <section>
+    <div class="sec-h"><div class="sec-num blue">8</div><h2>常用参数速查（studio.mjs）</h2></div>
+    <p class="lead">权威清单永远是 <code>node studio.mjs --help</code>。这里只挑常用的：</p>
+    <table>
+      <tr><th style="width:32%">参数</th><th>干什么用</th></tr>
+      <tr><td><code>--logline "…"</code></td><td>一句话故事，<b>唯一必填</b>，20–400 字</td></tr>
+      <tr><td><code>--duration 90</code></td><td>目标片长（秒），只认 60–300</td></tr>
+      <tr><td><code>--candidates 2</code></td><td>每镜头出几个候选（1–8，默认 3）。<b>直接决定 GPU 时长，小样建议 2</b></td></tr>
+      <tr><td><code>--offline</code></td><td>LLM 工位不调模型，用内置示例顶上</td></tr>
+      <tr><td><code>--dry-run</code></td><td>④ 只出提交计划，不 POST 不烧 GPU</td></tr>
+      <tr><td><code>--from 2 / --until 3</code></td><td>从哪站续跑 / 跑到哪站停（1 编剧 → 2 分镜 → 3 提示词 → 4 生成回环 → 5 剪辑 → 6 渲染，名字数字通用，<code>render</code> 也认）</td></tr>
+      <tr><td><code>--approve 文件 --reviewer 名字</code></td><td><b>人工关口点批专用</b>（只有人能跑），可加 <code>--reason "一句话理由"</code></td></tr>
+      <tr><td><code>--genreq 目录</code></td><td>从 ④ 续跑时指定生成指令批次（<code>--from 4</code> 必给）</td></tr>
+      <tr><td><code>--max-retries 3</code></td><td>回环重试上限，防无限烧 GPU</td></tr>
+      <tr><td><code>--model 名称</code></td><td>本次换用别的 LLM（平时用环境变量 <code>LOOM_LLM_MODEL</code> 更省事）</td></tr>
+      <tr><td><code>--endpoint 地址</code></td><td>ComfyUI 地址（默认 <code>http://127.0.0.1:8188</code>，或环境变量 <code>LOOM_COMFY_URL</code>）</td></tr>
+      <tr><td><code>--vision</code></td><td>⑤ 质检开启抽帧视觉复核（需 ffmpeg + 视觉模型 Key）</td></tr>
+    </table>
+  </section>
+
+  <!-- 9 排障 -->
+  <section>
+    <div class="sec-h"><div class="sec-num red">9</div><h2>出问题怎么办：先对号入座</h2></div>
+    <p class="lead">大部分「问题」其实是设计。对照下表：</p>
+    <table>
+      <tr><th style="width:38%">现象</th><th>怎么回事 / 怎么办</th></tr>
+      <tr><td>终端打出「强制人工关口…停下等人」</td><td><b>不是故障。</b>流水线在等你签字。照屏幕上打印的 <code>--approve</code> 命令执行，再按提示续跑。</td></tr>
+      <tr><td><code>未配置 API Key</code></td><td>配 <code>MODELSCOPE_API_KEY</code>（或 DashScope/OpenAI 任一），或者干脆加 <code>--offline</code> 彩排。</td></tr>
+      <tr><td><code>② 缺上游 c02</code> / <code>回环缺起点批次</code></td><td>续跑时没找到上一步的产物。要么从更前面的站重跑，要么用 <code>--screenplay / --genreq</code> 明确给路径。</td></tr>
+      <tr><td>校验打出 <code>[不通过] … 'envelope' is a required property</code></td><td>产物 JSON 缺外壳。报错会逐条写缺哪个字段，照着补。你手工编辑过产物文件？<b>别手改，回上游 Agent 重跑</b>。</td></tr>
+      <tr><td>批准命令报「不是可批的关口产物」</td><td><code>--approve</code> 只吃两种文件：剧本（c02）和剪辑决策单（c07）。别的文件不用批。</td></tr>
+      <tr><td>回环结束后「没有一条 pass」</td><td>机器不敢往下走是刻意的。看终端列出的「需要人工处理的项」和 <code>artifacts/qc_…/</code> 里的报告，处理完用 <code>--from 4 --genreq … --qc-dir …</code> 续跑。</td></tr>
+      <tr><td>渲染时说没有 ffmpeg / 字幕变方块</td><td>装 ffmpeg（含 libass）和中文字体后重跑 <code>--from render</code>。没有 ffmpeg 时流水线会跳过审阅粗剪渲染、按决策单审，不阻塞。</td></tr>
+      <tr><td>生成很慢 / 卡住不动</td><td>先想「冷启动 10 分钟、热态单镜 2–4 分钟」是不是还没到。再查 ComfyUI 页面（<code>127.0.0.1:8188</code>）看队列。</td></tr>
+      <tr><td><code>Value not in list: image</code></td><td>参考图素材没先上传到 ComfyUI。用 ③ 的素材清单（<code>--assets</code>）+ ④ 的自动上传通道，别手工裸 POST。</td></tr>
+      <tr><td>命令退出码 1 或 2</td><td>全仓库统一口径：<b>0</b> 正常（含关口停靠）、<b>1</b> 运行出错、<b>2</b> 命令用法不对（参数拼错等）。</td></tr>
+      <tr><td>在别的目录跑报 <code>SyntaxError: Unexpected token 'export'</code></td><td>那个目录缺 <code>package.json</code>。补一份 <code>{"type":"module"}</code> 即可（本仓库自带）。</td></tr>
+    </table>
+    <div class="tip"><div>💡</div><div>更深的坑（节点 ID、权重摆放、ComfyUI 升级后重校验等）看两份文档：<code>README.md</code> 第七节「已知限制」和 <code>docs/agent_guide.md</code> 第九节「症状→原因→修法」。</div></div>
+  </section>
+
+  <div class="footer">LOOM · Logline-Oriented Orchestration Machine —— 7 个 Agent 只通过版本化 JSON 契约交接，两道关口只由人点批<br>在线体验：www.modelscope.cn/studios/Incion/LOOM · 代码：github.com/Ink-SHEN/logline-loom</div>
+</div>
+</body>
+</html>
