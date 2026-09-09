@@ -10,6 +10,7 @@ Agent 的人格（system prompt）运行时从 agents/*/prompt.js 读——三�
 import copy
 import json
 import os
+import random
 
 import gradio as gr
 
@@ -164,43 +165,86 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, requested
     logs[-1] = "**③ 分镜 Agent**：%s" % note
     yield "\n\n".join(logs), brief, screenplay, shotlist, None, None
 
-    # ④ 提示词：为分镜表里「第一个会被真生成的镜头」写生成请求
-    logs.append("**④ 提示词 Agent**：正在写英文提示词…")
+    # ④ 提示词：为分镜表里每个镜头各生成一份 c04（整片生成计划）
+    logs.append("**④ 提示词 Agent**：正在为每个镜头写英文提示词…（%d 个镜头逐个生成）"
+                % len(((shotlist.get("payload") or {}).get("shots")) or []))
     yield "\n\n".join(logs), brief, screenplay, shotlist, None, None
-    # c03 已经给首镜定了 workflow_type，c04 必须沿用——分镜说 T2V 就不能自己改成 R2V，
-    # 否则参考图那一串字段会跟着错。
-    shots_c03 = (shotlist.get("payload") or {}).get("shots") or []
-    first_type = "T2V"
-    if shots_c03 and isinstance(shots_c03[0], dict):
-        first_type = shots_c03[0].get("workflow_type") or "T2V"
+    gen_items, gen_note, gen_degraded = pipeline.build_all_gen_requests(shotlist, offline=offline)
+    genreq_first = gen_items[0]["c04"] if gen_items else None
+    logs[-1] = "**④ 提示词 Agent**：%s" % gen_note
+    yield "\n\n".join(logs), brief, screenplay, shotlist, genreq_first, None
 
-    genreq, note, _ = pipeline.call_agent(
-        "prompt_writer", shotlist,
-        "镜头清单（c03_shotlist，artifact_id=%s）：\n%s\n\n"
-        "请为**第一个镜头（S001）**生成生成请求：英文提示词 + 时间码 + 节点 ID 映射。\n"
-        "⚠️ c04 契约的 payload 是**单个镜头对象**（required: shot_id / candidate_id / "
-        "workflow / generation / assets），**不是数组**——只输出这一个镜头的 JSON 代码块。\n"
-        "⚠️ 该镜头在 c03 里标注的 workflow_type 是 **%s**，必须沿用，不要改。"
-        % (shotlist["envelope"]["artifact_id"], json.dumps(shotlist["payload"], ensure_ascii=False, indent=2), first_type),
-        offline=offline)
-    logs[-1] = "**④ 提示词 Agent**：%s" % note
-    yield "\n\n".join(logs), brief, screenplay, shotlist, genreq, None
-
-    # ⑤ 生成
+    # ⑤ 生成：隧道可达 → 首镜即时真生成 + 其余整片下发 Spark 调度器；不可达 → 回放
     logs.append("**⑤ 生成 Agent**：正在探测 Spark 上的 ComfyUI…")
-    yield "\n\n".join(logs), brief, screenplay, shotlist, genreq, None
-    res = pipeline.generation_step(genreq)
-    gallery = [(p, os.path.basename(p)) for p in res["shots"]]
-    if res["mode"] == "live":
-        tail = "**⑤ 生成 Agent**：真生成完成（%s，prompt_id=%s）" % (res["note"], res.get("prompt_id", "-"))
-    elif res["mode"] == "live_async":
-        tail = ("**⑤ 生成 Agent**：已向 Spark 提交真生成任务\n\n"
-                "- %s\n- 探针：%s" % (res["note"], res["detail"]))
+    yield "\n\n".join(logs), brief, screenplay, shotlist, genreq_first, None
+
+    reachable, detail = generate.probe_live()
+    preview = generate.replay_shots()
+    gallery = [(p, os.path.basename(p)) for p in preview]
+
+    if not reachable:
+        logs[-1] = ("**⑤ 生成 Agent**：⚠️ **本次为预生成回放**，不是实时生成。\n\n"
+                    "- 原因：%s\n- 探针：%s" % (generate.replay_note() or "隧道不可达", detail))
+        yield "\n\n".join(logs), brief, screenplay, shotlist, genreq_first, gallery
+        return
+
+    batch_note = ""
+    if gen_items and not offline:
+        # —— 首镜即时真生成（评审秒级可见）——
+        try:
+            g0 = gen_items[0]
+            gen0 = g0.get("gen") or {}
+            p0 = gen0.get("prompt") or (g0["c04"].get("payload") or {}).get("generation", {}).get("prompt") or ""
+            try:
+                s0 = max(3.0, min(float(gen0.get("duration_seconds") or 5), 8.0))
+            except Exception:
+                s0 = 5.0
+            task0 = generate.submit_async(p0, s0,
+                                          seed=random.randint(1, 2 ** 31 - 1), prefix="loom/S001")
+            first_task = "**首镜已提交**（S001，任务 ID `%s`，预计约 %d 分钟出片）" \
+                % (task0["prompt_id"], max(1, round(task0.get("eta_seconds", 0) / 60)))
+        except Exception as e:
+            first_task = "⚠️ 首镜提交失败：%s（已保留回放预览）" % e
+
+        # —— 其余镜头整片下发给 Spark 调度器 ——
+        try:
+            shots_c03 = (shotlist.get("payload") or {}).get("shots") or []
+            sid_set = {g["shot_id"] for g in gen_items}
+            film_id = (brief["envelope"]["artifact_id"].replace("brief.", "film_"))
+            # 只下发非首镜
+            rest = pipeline.batch_plan_to_workflows(gen_items[1:], default_seed=random.randint(1, 2 ** 31 - 1))
+            if rest:
+                r = generate.submit_batch(film_id, rest)
+                batch_note = ("\n\n**整片任务已下发给 Spark 调度器**（film_id `%s`，%d 个后续镜头，"
+                              "将按 shot 顺序逐个真生成）：\n- 在下方「整片任务」区填 film_id 即可逐镜查看进度"
+                              % (r.get("film_id", film_id), len(rest)))
+        except Exception as e:
+            batch_note = "\n\n⚠️ 整片下发失败（不影响首镜）：%s" % e
     else:
-        tail = ("**⑤ 生成 Agent**：⚠️ **本次为预生成回放**，不是实时生成。\n\n"
-                "- 原因：%s\n- 探针：%s" % (res["note"] or "隧道不可达", res["detail"]))
-    logs[-1] = tail
-    yield "\n\n".join(logs), brief, screenplay, shotlist, genreq, gallery
+        first_task = "⚠️ 离线模式（未真正调 LLM / 生成），仅展示管线形状与回放预览" if offline else "（无镜头）"
+
+    logs[-1] = "**⑤ 生成 Agent**：%s%s\n\n- 探针：%s" % (first_task, batch_note, detail)
+    yield "\n\n".join(logs), brief, screenplay, shotlist, genreq_first, gallery
+
+
+def query_batch_progress(film_id):
+    """查 Spark 整片调度器上一个批次的逐镜进度。"""
+    fid = (film_id or "").strip()
+    if not fid:
+        return "请填 film_id（整片任务下发后，状态栏会给出）。"
+    try:
+        r = generate.query_batch(fid)
+    except Exception as e:
+        return "查询整片失败：%s（隧道可能断开或批次不存在）" % e
+    lines = ["整片任务 `%s` · 批次状态：**%s**" % (r.get("film_id"), r.get("status"))]
+    st_map = {"pending": "排队中", "queued": "排队中", "running": "生成中",
+              "done": "✅ 完成", "error": "❌ 失败"}
+    for s in r.get("shots", []):
+        mark = st_map.get(s.get("status"), s.get("status"))
+        p = s.get("result") or ""
+        base = os.path.basename(p) if p else ""
+        lines.append("- `%s`：%s%s" % (s.get("shot_id"), mark, (" → %s" % base) if base else ""))
+    return "\n".join(lines)
 
 
 def query_generation(prompt_id):
@@ -303,6 +347,18 @@ def build_ui():
             task_status = gr.Markdown("")
             task_video = gr.Gallery(label="真生成结果", columns=2, height=260)
             query_btn.click(query_generation, inputs=[task_id], outputs=[task_status, task_video])
+
+        with gr.Accordion("整片任务（Spark 逐镜生成进度）", open=False):
+            gr.Markdown(
+                "跑完一句话后，首镜会即时真生成（上方取回），**其余镜头打包成一个「整片任务」**"
+                "下发给本地 DGX Spark 上的调度器，由它按 shot 顺序逐个真生成——不受创空间休眠影响。"
+                "把整片任务的 film_id 粘进来就能看到每个镜头的进度；全部生成后是整部片子的逐镜成片。"
+                "（Spark 重启后仍会从断点续跑）")
+            with gr.Row():
+                batch_id = gr.Textbox(label="整片任务 film_id", scale=3, placeholder="例：film_20260909_...")
+                batch_btn = gr.Button("查整片进度", scale=1)
+            batch_status = gr.Markdown("")
+            batch_btn.click(query_batch_progress, inputs=[batch_id], outputs=[batch_status])
 
         # 生成器逐段 yield 依赖队列；不开队列时界面会停在「等待输入…」不更新
         demo.queue(default_concurrency_limit=4)
