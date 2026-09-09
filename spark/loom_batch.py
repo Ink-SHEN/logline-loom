@@ -35,11 +35,17 @@ try:
 except Exception as e:
     qc_mp4 = None
     print("warn: loom_qc 导入失败（%s），⑥质检将跳过" % e)
+try:
+    from loom_edit import edit_film
+except Exception as e:
+    edit_film = None
+    print("warn: loom_edit 导入失败（%s），⑦剪辑将跳过" % e)
 ENV_FILE = os.path.join(HERE, "loom.env")
 LOG_FILE = os.path.join(HERE, "batch.log")
 BATCH_DIR = os.path.join(HERE, "batches")
 QC_DIR = os.path.join(HERE, "qc")              # ⑥质检 c06 报告落盘 ~/loom/qc/<film>/<shot>.c06.json
 OUT_ROOT = os.path.join(HERE, "out")           # 成片落盘根 ~/loom/out/<film_id>/<shot_id>.mp4
+FILM_DIR = os.path.join(HERE, "films")         # ⑦剪辑最终成片 ~/loom/films/
 COMFY = "http://127.0.0.1:8288"                # 上游 ComfyUI（回环）
 
 LISTEN_HOST = "127.0.0.1"                       # 只回环，公网经 loom_proxy 转发进来
@@ -80,6 +86,7 @@ def _ensure():
     os.makedirs(BATCH_DIR, exist_ok=True)
     os.makedirs(OUT_ROOT, exist_ok=True)
     os.makedirs(QC_DIR, exist_ok=True)
+    os.makedirs(FILM_DIR, exist_ok=True)
 
 
 def _cmp(a, b):
@@ -191,6 +198,38 @@ def _run_batch(film_id):
     b["updated_at"] = int(time.time())
     save_batch(b)
     log("[%s] 批次结束，finished=%d/%d" % (film_id, len([s for s in b["shots"] if s.get("status") == "done"]), len(b["shots"])))
+
+    # ⑦ 剪辑成片：把质检通过(done且verdict非fail)的镜头按 shot 顺序 ffmpeg 拼接成最终成片
+    if edit_film is not None:
+        try:
+            ok_shots = [s for s in b["shots"]
+                        if s.get("status") == "done" and s.get("result")
+                        and (s.get("qc") or {}).get("verdict") in (None, "skipped", "pass", "pass_with_notes")]
+            # 保底：若严格过滤后为空，退而取所有 done 的镜头（至少能拼出可看的粗剪）
+            if not ok_shots:
+                ok_shots = [s for s in b["shots"] if s.get("status") == "done" and s.get("result")]
+            if ok_shots:
+                order = sorted(ok_shots, key=lambda s: s["shot_id"])
+                files = [s["result"] for s in order]
+                ed = edit_film(film_id, files, FILM_DIR)
+                if ed.get("ok"):
+                    b["film"] = {
+                        "path": ed["out_path"],
+                        "c07_path": os.path.join(QC_DIR, film_id, "c07_edit_decision.json"),
+                        "shots_in_film": len(files),
+                    }
+                    os.makedirs(os.path.join(QC_DIR, film_id), exist_ok=True)
+                    with open(b["film"]["c07_path"], "w", encoding="utf-8") as _f:
+                        json.dump(ed["c07"], _f, ensure_ascii=False, indent=1)
+                    b["updated_at"] = int(time.time())
+                    save_batch(b)
+                    log("[%s] ⑦剪辑成片完成 -> %s（%d 镜）" % (film_id, ed["out_path"], len(files)))
+                else:
+                    log("[%s] ⑦剪辑失败：%s" % (film_id, ed.get("error")))
+            else:
+                log("[%s] ⑦无可用素材拼接（没有 done 镜头）" % film_id)
+        except Exception as e:
+            log("[%s] ⑦剪辑异常：%s" % (film_id, e))
 
 
 MAX_QC_RETRY = 2   # 单镜质检不通过，最多换种子自动重试次数（含首次=2次出片）
@@ -452,6 +491,7 @@ def _public(b):
         "film_id": b["film_id"],
         "status": b["status"],
         "updated_at": b.get("updated_at"),
+        "film": b.get("film"),
         "shots": [{
             "shot_id": s["shot_id"],
             "status": s.get("status"),

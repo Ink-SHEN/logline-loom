@@ -254,6 +254,14 @@ def query_batch_progress(film_id):
             qc_line = " · %s%s" % (qc_map.get(v, v), ("（失败项：%s）" % "、".join(fails)) if fails else "")
         lines.append("- `%s`：%s%s%s" % (s.get("shot_id"), mark,
                                          (" → %s" % base) if base else "", qc_line))
+    # ⑦ 剪辑成片
+    film = r.get("film")
+    if film:
+        fpath = film.get("path") or ""
+        lines.append("\n**⑦ 剪辑成片已生成** ✅：`%s`（Spark 端 %d 个质检通过镜头 ffmpeg 拼接）"
+                     % (os.path.basename(fpath), film.get("shots_in_film", 0)))
+        lines.append("成片位于 Spark `~/loom/films/`（评审可用该文件作为最终短片，c07 决策单在 `%s`）"
+                     % (film.get("c07_path") or ""))
     return "\n".join(lines)
 
 
