@@ -1,7 +1,7 @@
 #!/bin/bash
 # LOOM 链路健康自愈：哪个环节断了，就把从它开始的后续环节补拉起来。
 # 每 2 分钟由 crontab 调用一次。链路依赖（必须按序）：
-#   ComfyUI(8288) → loom_proxy(8188) → natapp(公网) → loom_watch(上报)
+#   ComfyUI(8288) → loom_proxy(8188) → loom_batch(8388) → natapp(公网) → loom_watch(上报)
 set -u
 L=/home/Developer/loom
 NAT=/home/Developer/natapp
@@ -10,7 +10,7 @@ PY=/home/Developer/miniforge3/envs/h3-comfy/bin/python
 export PATH=/home/Developer/miniforge3/bin:/usr/bin:/bin:/usr/local/bin
 
 now() { date '+%Y-%m-%d %H:%M:%S'; }
-ok_comfy=0; ok_proxy=0; ok_nat=0; ok_watch=0
+ok_comfy=0; ok_proxy=0; ok_batch=0; ok_nat=0; ok_watch=0
 
 # 1) ComfyUI：必须监听 127.0.0.1:8288（回环，公网不可达）
 if curl -s -m 3 http://127.0.0.1:8288/system_stats >/dev/null 2>&1; then
@@ -34,6 +34,17 @@ else
   ok_proxy=1
 fi
 
+# 2.5) loom_batch：整片调度器（127.0.0.1:8388，本地可达性；无 token 期望 401）
+if curl -s -m 3 -o /dev/null -w '%{http_code}' http://127.0.0.1:8388/batch/x 2>/dev/null \
+   | grep -qE '^(401|403|404|200|500)$'; then
+  ok_batch=1
+else
+  echo "$(now) loom_batch 未响应，尝试拉起…"
+  setsid nohup python3 "$L/loom_batch.py" </dev/null >>"$L/batch.log" 2>&1 &
+  sleep 3
+  ok_batch=1
+fi
+
 # 3) natapp：公网隧道进程
 if pgrep -x natapp >/dev/null; then
   ok_nat=1
@@ -52,4 +63,4 @@ else
   sleep 2
 fi
 
-echo "$(now) health: comfy=$ok_comfy proxy=$ok_proxy natapp=$ok_nat watch=$ok_watch"
+echo "$(now) health: comfy=$ok_comfy proxy=$ok_proxy batch=$ok_batch natapp=$ok_nat watch=$ok_watch"
