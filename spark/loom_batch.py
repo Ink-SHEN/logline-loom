@@ -272,6 +272,40 @@ def _with_new_seed(workflow):
     return wf
 
 
+def _find_prompt_node_text(workflow):
+    """在 workflow 里找含较长字符串 prompt 的节点，返回该文本（用于定位改写）。找不到返回 None。"""
+    best = None
+    for node in workflow.values():
+        inp = node.get("inputs")
+        if isinstance(inp, dict):
+            p = inp.get("prompt")
+            if isinstance(p, str) and len(p) > 20:
+                if best is None or len(p) > len(best):
+                    best = p
+    return best
+
+
+def _with_new_prompt(workflow, old_prompt, new_prompt):
+    """复制 workflow，把含 old_prompt 文本的节点 prompt 替换成 new_prompt，并换一个随机 seed。"""
+    import copy as _c
+    import random as _r
+    wf = _c.deepcopy(workflow)
+    replaced = False
+    for node in wf.values():
+        inp = node.get("inputs")
+        if isinstance(inp, dict):
+            p = inp.get("prompt")
+            if isinstance(p, str) and old_prompt and old_prompt in p:
+                inp["prompt"] = new_prompt
+                replaced = True
+            if "noise_seed" in inp:
+                inp["noise_seed"] = _r.randint(1, 2 ** 31 - 1)
+    # 若没找到精确旧文本，退而替换最长的 prompt 节点
+    if not replaced:
+        _with_new_seed(wf)
+    return wf
+
+
 def _is_retryable_fail(shot):
     """质检 fail 是否属于「换种子重跑可能修复」的类。
 
@@ -285,11 +319,13 @@ def _is_retryable_fail(shot):
 
 
 def _gen_one(batch, shot):
-    """提交一个镜头 → 轮询 → 下载 → 质检；fail 且可自动修则换种子重试（最多 MAX_QC_RETRY 次）。"""
+    """提交一个镜头 → 轮询 → 下载 → 质检；fail 且可自动修则打回重试（最多 MAX_QC_RETRY 次）。"""
     wf = shot.get("workflow")
     if not isinstance(wf, dict):
         raise ValueError("该镜头缺 workflow 字段")
     base_wf = shot.setdefault("base_workflow", wf)
+    # 记住首次提交的提示词，供 rewrite_prompt 打回时定位替换
+    base_wf_prompt = _find_prompt_node_text(base_wf) or (shot.get("qc_targets") or {}).get("prompt_en") or ""
     attempt_wf = wf if shot.get("qc") is None else _with_new_seed(base_wf)
     attempts = int(shot.get("retry_count") or 0)
     max_retries = int(shot.get("max_retries") or MAX_QC_RETRY)
@@ -331,6 +367,7 @@ def _gen_one(batch, shot):
                     "score": qc["c06"]["score"],
                     "failed_items": qc["c06"]["failed_items"],
                     "route_to": qc["c06"]["route_to"],
+                    "suggested_change": qc["c06"].get("suggested_change"),
                     "report": os.path.join(QC_DIR, batch["film_id"], safe_id + ".c06.json"),
                     "attempts": attempts + 1,
                 }
@@ -350,15 +387,23 @@ def _gen_one(batch, shot):
                                                  attempts + 1, verdict, dest))
         save_batch(batch)
 
-        # 打回判断：客观可修(缺流/音频) 或 视觉主观 fail(route_to=retry) → 换种子重试（达上限停）
+        # 打回判断：客观可修(缺流/音频) 或 视觉主观 fail(route_to=retry) → 打回重试（达上限停）
         rt = (shot.get("qc") or {}).get("route_to")
         if verdict == "fail" and (rt == "retry" or _is_retryable_fail(shot)) and attempts < max_retries:
             attempts += 1
             shot["retry_count"] = attempts
-            log("[%s] %s 质检fail（%s）route=%s，换种子自动重试 %d/%d"
-                % (batch["film_id"], shot["shot_id"],
-                   "、".join(shot["qc"].get("failed_items") or []), rt, attempts, max_retries))
-            attempt_wf = _with_new_seed(base_wf)
+            sc = (shot.get("qc") or {}).get("suggested_change") or {}
+            new_prompt = (sc.get("patch") or {}).get("prompt") if sc.get("action") == "rewrite_prompt" else None
+            if isinstance(new_prompt, str) and new_prompt.strip() and new_prompt != base_wf_prompt:
+                # 应用视觉改写建议：换 prompt 并换 seed（对齐本地 rewrite_prompt 动作）
+                attempt_wf = _with_new_prompt(base_wf, base_wf_prompt, new_prompt.strip())
+                log("[%s] %s 质检fail，应用视觉改写建议(rewrite_prompt)重试 %d/%d"
+                    % (batch["film_id"], shot["shot_id"], attempts, max_retries))
+            else:
+                attempt_wf = _with_new_seed(base_wf)
+                log("[%s] %s 质检fail（%s）route=%s，换种子自动重试 %d/%d"
+                    % (batch["film_id"], shot["shot_id"],
+                       "、".join(shot["qc"].get("failed_items") or []), rt, attempts, max_retries))
             continue
         # 人工类 fail / 达到上限 / 通过 → 定案
         if verdict == "fail":
