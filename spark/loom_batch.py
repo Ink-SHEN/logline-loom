@@ -193,18 +193,111 @@ def _run_batch(film_id):
     log("[%s] 批次结束，finished=%d/%d" % (film_id, len([s for s in b["shots"] if s.get("status") == "done"]), len(b["shots"])))
 
 
+MAX_QC_RETRY = 2   # 单镜质检不通过，最多换种子自动重试次数（含首次=2次出片）
+
+
+def _with_new_seed(workflow):
+    """复制 workflow，把所有含 noise_seed 输入的节点换成新随机种子（不依赖节点 ID）。"""
+    import copy as _c
+    import random as _r
+    wf = _c.deepcopy(workflow)
+    for node in wf.values():
+        inp = node.get("inputs")
+        if isinstance(inp, dict) and "noise_seed" in inp:
+            inp["noise_seed"] = _r.randint(1, 2 ** 31 - 1)
+    return wf
+
+
+def _is_retryable_fail(shot):
+    """质检 fail 是否属于「换种子重跑可能修复」的类。
+
+    缺流/音频规格错 = H3 生成偶发异常，换种子最可能好（new_seed 类）。
+    fps/画幅/时长 属模板或目标问题，换种子也会错（完整版走 manual/change_duration），
+    这里不自动重试这类，直接标 human 停，避免白烧 GPU。
+    """
+    fails = set(shot.get("qc", {}).get("failed_items") or [])
+    auto = {"has_video_stream", "has_audio_stream", "audio_32k_stereo"}
+    return bool(fails & auto)
+
+
 def _gen_one(batch, shot):
-    """提交一个镜头 → 轮询 → 下载。会写回 shot 状态。"""
+    """提交一个镜头 → 轮询 → 下载 → 质检；fail 且可自动修则换种子重试（最多 MAX_QC_RETRY 次）。"""
     wf = shot.get("workflow")
     if not isinstance(wf, dict):
         raise ValueError("该镜头缺 workflow 字段")
-    res = _comfy_post("/prompt", {"prompt": wf})
-    pid = res.get("prompt_id")
-    if not pid:
-        raise ValueError("ComfyUI 未返回 prompt_id: %s" % res)
-    shot["prompt_id"] = pid
-    save_batch(batch)
+    base_wf = shot.setdefault("base_workflow", wf)
+    attempt_wf = wf if shot.get("qc") is None else _with_new_seed(base_wf)
+    attempts = int(shot.get("retry_count") or 0)
+    max_retries = int(shot.get("max_retries") or MAX_QC_RETRY)
 
+    while True:
+        res = _comfy_post("/prompt", {"prompt": attempt_wf})
+        pid = res.get("prompt_id")
+        if not pid:
+            raise ValueError("ComfyUI 未返回 prompt_id: %s" % res)
+        shot["prompt_id"] = pid
+        save_batch(batch)
+
+        dest = _poll_and_download(batch, shot, pid)
+        shot["result"] = dest
+        shot["status"] = "done"
+        shot["finished_at"] = int(time.time())
+
+        # ⑥ 客观质检
+        verdict, _route = "pass", "edit"
+        if qc_mp4 is not None:
+            targets = shot.get("qc_targets") or {}
+            qc = qc_mp4(dest, {
+                "duration_seconds": targets.get("duration_seconds"),
+                "aspect_ratio_text": targets.get("aspect_ratio_text"),
+                "megapixels": targets.get("megapixels"),
+            })
+            if qc.get("ok"):
+                safe_id = re.sub(r"[^A-Za-z0-9._-]", "_", shot.get("shot_id") or "shot")
+                shot["qc"] = {
+                    "verdict": qc["c06"]["verdict"],
+                    "score": qc["c06"]["score"],
+                    "failed_items": qc["c06"]["failed_items"],
+                    "route_to": qc["c06"]["route_to"],
+                    "report": os.path.join(QC_DIR, batch["film_id"], safe_id + ".c06.json"),
+                    "attempts": attempts + 1,
+                }
+                os.makedirs(os.path.join(QC_DIR, batch["film_id"]), exist_ok=True)
+                with open(shot["qc"]["report"], "w", encoding="utf-8") as _f:
+                    json.dump(qc["c06"], _f, ensure_ascii=False, indent=1)
+                verdict, _route = qc["c06"]["verdict"], qc["c06"]["route_to"]
+            else:
+                shot["qc"] = {"verdict": "error", "error": qc.get("error"), "score": None,
+                              "failed_items": [], "route_to": "human", "attempts": attempts + 1}
+                verdict = "error"
+        else:
+            shot["qc"] = {"verdict": "skipped", "score": None, "failed_items": [],
+                          "route_to": "edit", "attempts": attempts + 1}
+
+        log("[%s] %s 第%d次出片，质检=%s -> %s" % (batch["film_id"], shot["shot_id"],
+                                                 attempts + 1, verdict, dest))
+        save_batch(batch)
+
+        # 打回判断：客观 fail 且属于可自动修类 → 换种子重试（达上限停）
+        if verdict == "fail" and _is_retryable_fail(shot) and attempts < max_retries:
+            attempts += 1
+            shot["retry_count"] = attempts
+            log("[%s] %s 质检fail（%s），换种子自动重试 %d/%d"
+                % (batch["film_id"], shot["shot_id"],
+                   "、".join(shot["qc"].get("failed_items") or []), attempts, max_retries))
+            attempt_wf = _with_new_seed(base_wf)
+            continue
+        # 人工类 fail / 达到上限 / 通过 → 定案
+        if verdict == "fail":
+            shot["qc"]["route_to"] = "human"
+            shot["qc"]["note"] = ("质检 fail，失败项 %s 不属于可自动修复类，或已达重试上限，"
+                                  "留人工核对 ffprobe 报告/提示词"
+                                  % "、".join(shot["qc"].get("failed_items") or []))
+        return
+
+
+def _poll_and_download(batch, shot, pid):
+    """轮询 ComfyUI 出片并下载。返回本地 mp4 路径。"""
     deadline = time.time() + STATUS_BUDGET
     while time.time() < deadline:
         time.sleep(POLL_INTERVAL)
@@ -212,7 +305,6 @@ def _gen_one(batch, shot):
         entry = (hist or {}).get(pid)
         if not entry:
             continue
-        # 成功：找 mp4
         got = None
         for node_out in (entry.get("outputs") or {}).values():
             for key in ("images", "gifs", "videos"):
@@ -229,40 +321,11 @@ def _gen_one(batch, shot):
             dest = os.path.join(OUT_ROOT, batch["film_id"], safe_id + ".mp4")
             os.makedirs(os.path.dirname(dest), exist_ok=True)
             _download(got, dest)
-            shot["result"] = dest
-            shot["status"] = "done"
-            shot["finished_at"] = int(time.time())
-            # ⑥ 客观质检：对成片跑 ffprobe
-            if qc_mp4 is not None:
-                targets = shot.get("qc_targets") or {}
-                qc = qc_mp4(dest, {
-                    "duration_seconds": targets.get("duration_seconds"),
-                    "aspect_ratio_text": targets.get("aspect_ratio_text"),
-                    "megapixels": targets.get("megapixels"),
-                })
-                if qc.get("ok"):
-                    shot["qc"] = {
-                        "verdict": qc["c06"]["verdict"],
-                        "score": qc["c06"]["score"],
-                        "failed_items": qc["c06"]["failed_items"],
-                        "route_to": qc["c06"]["route_to"],
-                        "report": os.path.join(QC_DIR, batch["film_id"], safe_id + ".c06.json"),
-                    }
-                    os.makedirs(os.path.join(QC_DIR, batch["film_id"]), exist_ok=True)
-                    with open(shot["qc"]["report"], "w", encoding="utf-8") as _f:
-                        json.dump(qc["c06"], _f, ensure_ascii=False, indent=1)
-                else:
-                    shot["qc"] = {"verdict": "error", "error": qc.get("error"), "score": None,
-                                  "failed_items": [], "route_to": "human"}
-            log("[%s] %s 完成 -> %s" % (batch["film_id"], shot["shot_id"], dest))
-            save_batch(batch)
-            return
-        # 失败态
+            return dest
         st = (entry.get("status") or {}).get("status_str")
         if st in ("error", "cancelled"):
             msgs = entry.get("status", {}).get("messages", [])
             raise RuntimeError("ComfyUI %s: %s" % (st, json.dumps(msgs)[:300]))
-        # 否则继续等
     raise TimeoutError("单镜 %s 超时 %ss" % (shot.get("shot_id"), STATUS_BUDGET))
 
 
