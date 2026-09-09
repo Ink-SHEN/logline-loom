@@ -512,5 +512,6 @@ def batch_plan_to_workflows(gen_items, default_seed=None, aspect_text=None,
                         "workflow": wf,
                         "qc_targets": {"duration_seconds": round(seconds, 2),
                                        "aspect_ratio_text": aspect_text or "16:9 (Widescreen)",
-                                       "megapixels": None}})
+                                       "megapixels": None,
+                                       "prompt_en": prompt}})
     return out
