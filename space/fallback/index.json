@@ -1,12 +1,46 @@
 {
-  "note": "以下均为 LOOM 管线上已生成的镜头（MiniMax-H3，跑在 NVIDIA DGX Spark 上，5 秒 / 24fps / 含原生音频）。仅用于真生成后端不可达时的回放演示，界面会明确标注「本次为预生成回放」。",
-  "source": "clips/clips/*.mp4（2026-09-06 生成批次）",
+  "note": "以下均为 LOOM 管线上真实生成的镜头（MiniMax-H3，跑在 NVIDIA DGX Spark 上）。素材来自 2026-09-09 本地 studio.mjs 完整管线产出的 c05 候选（shots/<candidate_id>/video.mp4），H3 原生带音频、24fps。仅用于真生成后端不可达时的回放演示，界面会明确标注「本次为预生成回放」，不冒充实时生成。",
+  "source": "shots/S001_c01、S006_c01、S010_c01、S026_c01 的 video.mp4（2026-09-09 生成批次，本地 studio.mjs 完整管线）",
   "shots": [
-    { "file": "shot01.mp4", "label": "镜头 01" },
-    { "file": "shot03.mp4", "label": "镜头 03" },
-    { "file": "shot05.mp4", "label": "镜头 05" },
-    { "file": "shot09.mp4", "label": "镜头 09" },
-    { "file": "shot12.mp4", "label": "镜头 12" },
-    { "file": "shot16.mp4", "label": "镜头 16" }
+    {
+      "file": "S001_c01.mp4",
+      "label": "镜头 S001 [0s-8s]",
+      "timecode": "[0s-8s]",
+      "duration_seconds": 8.0,
+      "resolution": "1280x736",
+      "prompt_head": "Extreme close-up, slow push-in",
+      "fps": 24,
+      "audio": "aac 32000Hz 2ch"
+    },
+    {
+      "file": "S006_c01.mp4",
+      "label": "镜头 S006 [39s-46s]",
+      "timecode": "[39s-46s]",
+      "duration_seconds": 7.0,
+      "resolution": "1984x1120",
+      "prompt_head": "Extreme close-up, very slow push-in",
+      "fps": 24,
+      "audio": "aac 32000Hz 2ch"
+    },
+    {
+      "file": "S010_c01.mp4",
+      "label": "镜头 S010 [69s-76s]",
+      "timecode": "[69s-76s]",
+      "duration_seconds": 7.0,
+      "resolution": "1280x736",
+      "prompt_head": "Top-down close-up, static",
+      "fps": 24,
+      "audio": "aac 32000Hz 2ch"
+    },
+    {
+      "file": "S026_c01.mp4",
+      "label": "镜头 S026 [194s-202s]",
+      "timecode": "[194s-202s]",
+      "duration_seconds": 8.0,
+      "resolution": "1984x1120",
+      "prompt_head": "Starting on an extreme close-up of the unlit cig",
+      "fps": 24,
+      "audio": "aac 32000Hz 2ch"
+    }
   ]
 }
