@@ -428,3 +428,76 @@ def _clip(text, seconds):
         secs = 5.0
     # H3 单次出片上限 15 秒；创空间演示取 3–8 秒，兼顾等待时间与画面完整度
     return text, max(3.0, min(secs, 8.0))
+
+
+def build_all_gen_requests(shotlist_doc, offline=False):
+    """④ 逐镜头生成 c04（为整片调度器准备每镜一份生成请求）。
+
+    返回 (列表, 说明, 是否有降级)。列表元素形如：
+      { "shot_id", "workflow_type", "gen": <c04 的 generation dict>, "c04": <完整 c04 doc> }
+
+    本轮聚焦 T2V：即使某镜头 c03 标了 I2V/R2V，也要求提示词 Agent 按 T2V 输出
+    （创空间当前只有 T2V 工作流；非 T2V 镜头降级为文生，assets 留空）。
+    每个镜头独立调一次 prompt_writer（④ Agent），保证各自过契约校验。
+    """
+    shots = ((shotlist_doc.get("payload") or {}).get("shots")) or []
+    out, notes, degraded_any = [], [], False
+
+    for shot in shots:
+        if not isinstance(shot, dict):
+            continue
+        sid = shot.get("shot_id") or shot.get("order") or "?"
+        wtype = (shot.get("workflow_type") or "T2V").upper()
+        if wtype not in ("T2V", "I2V", "R2V"):
+            wtype = "T2V"
+        if wtype != "T2V":
+            degraded_any = True
+        user_msg = (
+            "镜头清单（c03_shotlist，artifact_id=%s）：\n%s\n\n"
+            "请为镜头 **%s** 生成生成请求：英文提示词 + 时间码 + 节点 ID 映射。\n"
+            "⚠️ c04 契约 payload 是**单个镜头对象**，只输出这一个镜头的 JSON。\n"
+            "⚠️ 本镜 c03 标注 workflow_type **%s**。当前整片生成统一按 **T2V**：把镜头文字描述写进 "
+            "generation.prompt，workflow.type 用 T2V、api_json 用 workflow_api_t2v.json，assets 留空。"
+            % (shotlist_doc["envelope"]["artifact_id"],
+               json.dumps(shotlist_doc["payload"], ensure_ascii=False, indent=2),
+               sid, wtype))
+        req, note, degraded = call_agent("prompt_writer", shotlist_doc, user_msg, offline=offline)
+        gen = ((req.get("payload") or {}).get("generation")) or {}
+        out.append({"shot_id": sid, "workflow_type": "T2V",
+                    "gen": gen, "c04": req, "note": note})
+        notes.append("%s：%s" % (sid, note))
+        if degraded:
+            degraded_any = True
+
+    summary = "已为 %d 个镜头生成生成请求（按 T2V 整片计划）" % len(out)
+    if degraded_any:
+        summary += "（含非 T2V 镜头降级为 T2V，或个别降级为示例产物）"
+    return out, summary, degraded_any
+
+
+def batch_plan_to_workflows(gen_items, default_seed=None):
+    """把逐镜 c04 的 generation 转成给调度器的 T2V workflow dict 清单。
+
+    返回 [{ shot_id, workflow_type, workflow }]，workflow 由 generate.build_t2v_workflow 生成。
+    seed 缺省用时间派生的随机种子；prefix 形如 film/S<shot>，便于 Spark 归档。
+    """
+    from . import generate as _g
+    import random as _r
+    out = []
+    for it in gen_items:
+        gen = it.get("gen") or {}
+        prompt = gen.get("prompt")
+        if not prompt:
+            # 兜底：该镜没产出可用提示词，跳过
+            continue
+        try:
+            seconds = max(3.0, min(float(gen.get("duration_seconds") or 5), 8.0))
+        except Exception:
+            seconds = 5.0
+        sid = str(it["shot_id"])
+        seed = default_seed if default_seed is not None else _r.randint(1, 2 ** 31 - 1)
+        num = "".join(ch for ch in sid if ch.isdigit()) or "0"
+        prefix = "film/S%s" % num
+        wf = _g.build_t2v_workflow(prompt, seconds, seed=seed, prefix=prefix)
+        out.append({"shot_id": sid, "workflow_type": "T2V", "workflow": wf})
+    return out

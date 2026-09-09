@@ -62,9 +62,8 @@ def probe_live(force=True):
     return bool(url), detail
 
 
-def submit_live(prompt_text, seconds=5.0, seed=None, prefix="loom/space"):
-    """POST 一次 T2V 生成。返回 prompt_id。"""
-    base = _base()
+def build_t2v_workflow(prompt_text, seconds=5.0, seed=None, prefix="loom/space"):
+    """构造一份填好的 T2V ComfyUI 工作流 dict（供单镜提交 / 整片调度器复用）。"""
     wf_path = os.path.join(config.WORKFLOWS_DIR, "workflow_api_t2v.json")
     wf = json.load(open(wf_path, encoding="utf-8"))
     if T2V_PROMPT_NODE in wf:
@@ -75,6 +74,13 @@ def submit_live(prompt_text, seconds=5.0, seed=None, prefix="loom/space"):
         wf[T2V_SEED_NODE]["inputs"]["noise_seed"] = int(seed)
     if T2V_PREFIX_NODE in wf:
         wf[T2V_PREFIX_NODE]["inputs"]["filename_prefix"] = prefix
+    return wf
+
+
+def submit_live(prompt_text, seconds=5.0, seed=None, prefix="loom/space"):
+    """POST 一次 T2V 生成。返回 prompt_id。"""
+    base = _base()
+    wf = build_t2v_workflow(prompt_text, seconds, seed, prefix)
     res = _post(base + "/prompt", {"prompt": wf})
     return res.get("prompt_id")
 
@@ -235,3 +241,44 @@ def replay_note():
         except Exception:
             return ""
     return ""
+
+
+# ---------- 整片调度器（Spark 侧 loom_batch.py）客户端 ----------
+
+def submit_batch(film_id, shots):
+    """把一份镜头清单 POST 给 Spark 整片调度器。
+
+    shots: [{ shot_id, workflow_type, workflow }]，workflow 是已填好的 ComfyUI dict
+    （T2V 收敛，由调用方 build_t2v_workflow 生成）。经隧道同一入口的 /batch/* 转发。
+    """
+    base = _base()
+    payload = {"shots": [{
+        "shot_id": s["shot_id"],
+        "workflow_type": s.get("workflow_type") or "T2V",
+        "workflow": s["workflow"],
+    } for s in shots]}
+    req = urllib.request.Request(base + "/batch/" + str(film_id),
+                                 data=json.dumps(payload).encode("utf-8"),
+                                 headers=_auth_headers(), method="POST")
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def query_batch(film_id):
+    """查 Spark 整片调度器上一个批次的逐镜进度。返回 dict 或抛错。"""
+    base = _base()
+    req = urllib.request.Request(base + "/batch/" + str(film_id), headers=_auth_headers())
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def delete_batch(film_id):
+    """清理 Spark 上的一个批次（可选）。"""
+    base = _base()
+    req = urllib.request.Request(base + "/batch/" + str(film_id), headers=_auth_headers(), method="DELETE")
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        return {"ok": False, "error": "HTTP %s" % e.code}
+
