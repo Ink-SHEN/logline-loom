@@ -475,10 +475,11 @@ def build_all_gen_requests(shotlist_doc, offline=False):
     return out, summary, degraded_any
 
 
-def batch_plan_to_workflows(gen_items, default_seed=None):
+def batch_plan_to_workflows(gen_items, default_seed=None, aspect_text=None):
     """把逐镜 c04 的 generation 转成给调度器的 T2V workflow dict 清单。
 
-    返回 [{ shot_id, workflow_type, workflow }]，workflow 由 generate.build_t2v_workflow 生成。
+    返回 [{ shot_id, workflow_type, workflow, qc_targets }]，workflow 由
+    generate.build_t2v_workflow 生成。qc_targets 携带该镜时长与画幅，供 Spark 端 ⑥ 质检。
     seed 缺省用时间派生的随机种子；prefix 形如 film/S<shot>，便于 Spark 归档。
     """
     from . import generate as _g
@@ -488,7 +489,6 @@ def batch_plan_to_workflows(gen_items, default_seed=None):
         gen = it.get("gen") or {}
         prompt = gen.get("prompt")
         if not prompt:
-            # 兜底：该镜没产出可用提示词，跳过
             continue
         try:
             seconds = max(3.0, min(float(gen.get("duration_seconds") or 5), 8.0))
@@ -499,5 +499,8 @@ def batch_plan_to_workflows(gen_items, default_seed=None):
         num = "".join(ch for ch in sid if ch.isdigit()) or "0"
         prefix = "film/S%s" % num
         wf = _g.build_t2v_workflow(prompt, seconds, seed=seed, prefix=prefix)
-        out.append({"shot_id": sid, "workflow_type": "T2V", "workflow": wf})
+        out.append({"shot_id": sid, "workflow_type": "T2V", "workflow": wf,
+                    "qc_targets": {"duration_seconds": round(seconds, 2),
+                                   "aspect_ratio_text": aspect_text or "16:9 (Widescreen)",
+                                   "megapixels": None}})
     return out

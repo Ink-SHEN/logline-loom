@@ -28,9 +28,17 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+# 质检模块（同目录）：⑥ 客观项 ffprobe 硬判
+sys.path.insert(0, HERE)
+try:
+    from loom_qc import qc_mp4
+except Exception as e:
+    qc_mp4 = None
+    print("warn: loom_qc 导入失败（%s），⑥质检将跳过" % e)
 ENV_FILE = os.path.join(HERE, "loom.env")
 LOG_FILE = os.path.join(HERE, "batch.log")
 BATCH_DIR = os.path.join(HERE, "batches")
+QC_DIR = os.path.join(HERE, "qc")              # ⑥质检 c06 报告落盘 ~/loom/qc/<film>/<shot>.c06.json
 OUT_ROOT = os.path.join(HERE, "out")           # 成片落盘根 ~/loom/out/<film_id>/<shot_id>.mp4
 COMFY = "http://127.0.0.1:8288"                # 上游 ComfyUI（回环）
 
@@ -71,6 +79,7 @@ def load_env(path=ENV_FILE):
 def _ensure():
     os.makedirs(BATCH_DIR, exist_ok=True)
     os.makedirs(OUT_ROOT, exist_ok=True)
+    os.makedirs(QC_DIR, exist_ok=True)
 
 
 def _cmp(a, b):
@@ -223,6 +232,28 @@ def _gen_one(batch, shot):
             shot["result"] = dest
             shot["status"] = "done"
             shot["finished_at"] = int(time.time())
+            # ⑥ 客观质检：对成片跑 ffprobe
+            if qc_mp4 is not None:
+                targets = shot.get("qc_targets") or {}
+                qc = qc_mp4(dest, {
+                    "duration_seconds": targets.get("duration_seconds"),
+                    "aspect_ratio_text": targets.get("aspect_ratio_text"),
+                    "megapixels": targets.get("megapixels"),
+                })
+                if qc.get("ok"):
+                    shot["qc"] = {
+                        "verdict": qc["c06"]["verdict"],
+                        "score": qc["c06"]["score"],
+                        "failed_items": qc["c06"]["failed_items"],
+                        "route_to": qc["c06"]["route_to"],
+                        "report": os.path.join(QC_DIR, batch["film_id"], safe_id + ".c06.json"),
+                    }
+                    os.makedirs(os.path.join(QC_DIR, batch["film_id"]), exist_ok=True)
+                    with open(shot["qc"]["report"], "w", encoding="utf-8") as _f:
+                        json.dump(qc["c06"], _f, ensure_ascii=False, indent=1)
+                else:
+                    shot["qc"] = {"verdict": "error", "error": qc.get("error"), "score": None,
+                                  "failed_items": [], "route_to": "human"}
             log("[%s] %s 完成 -> %s" % (batch["film_id"], shot["shot_id"], dest))
             save_batch(batch)
             return
@@ -324,6 +355,7 @@ class BatchHandler(BaseHTTPRequestHandler):
                     "shot_id": sid,
                     "status": "pending",
                     "workflow": s.get("workflow"),
+                    "qc_targets": s.get("qc_targets") or {},
                 })
             if not clean:
                 return self._json(400, {"error": "shots 无效"})
@@ -363,6 +395,7 @@ def _public(b):
             "result": s.get("result"),
             "error": s.get("error"),
             "prompt_id": s.get("prompt_id"),
+            "qc": s.get("qc"),
         } for s in b["shots"]],
     }
 
