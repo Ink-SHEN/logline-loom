@@ -31,7 +31,7 @@ space/
 |---|---|---|
 | `LOOM_LLM_API_KEY` | LLM API Key（缺省回退 `MODELSCOPE_API_KEY`） | **secret** |
 | `LOOM_LLM_BASE_URL` | 默认 `https://api-inference.modelscope.cn/v1` | 明文即可 |
-| `LOOM_LLM_MODEL` | 默认 `Qwen/Qwen2.5-72B-Instruct` | 明文即可 |
+| `LOOM_LLM_MODEL` | 默认 `Qwen/Qwen3.8-Flash-Next` | 明文即可 |
 | `LOOM_COMFY_URL` | 反向代理地址（方案 A）。空 = 只回放 | **secret** |
 | `LOOM_PROXY_TOKEN` | 代理层校验用的 token | **secret** |
 | `LOOM_PROBE_TIMEOUT` | 隧道探测超时秒数，默认 5 | 明文 |

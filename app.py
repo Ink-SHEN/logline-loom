@@ -7,7 +7,6 @@ Agent 的人格（system prompt）运行时从 agents/*/prompt.js 读——三�
 
 用法（本地）：  pip install -r requirements.txt && python app.py
 """
-import copy
 import json
 import os
 import random

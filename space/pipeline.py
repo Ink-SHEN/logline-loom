@@ -277,7 +277,6 @@ def _inject_node_ids(doc):
     if len(node_ids) > 1:
         workflow["node_ids"] = node_ids
     return doc
-    return doc
 
 
 def call_agent(slug, upstream_doc, user_message, offline=False):

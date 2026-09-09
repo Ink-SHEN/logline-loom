@@ -190,9 +190,9 @@ def query_task(prompt_id):
     if entry:
         for node_out in (entry.get("outputs") or {}).values():
             for key in ("images", "gifs", "videos"):
-                    for item in (node_out.get(key) or []):
-                        if str(item.get("filename", "")).lower().endswith((".mp4", ".webm")):
-                            path = _download(_base(), item)
+                for item in (node_out.get(key) or []):
+                    if str(item.get("filename", "")).lower().endswith((".mp4", ".webm")):
+                        path = _download(_base(), item)
                         t.update({"status": "done", "result": path})
                         _save_tasks(tasks)
                         return {"status": "done", "detail": "真生成完成",
