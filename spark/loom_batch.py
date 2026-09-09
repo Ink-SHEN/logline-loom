@@ -199,18 +199,16 @@ def _run_batch(film_id):
     save_batch(b)
     log("[%s] 批次结束，finished=%d/%d" % (film_id, len([s for s in b["shots"] if s.get("status") == "done"]), len(b["shots"])))
 
-    # ⑦ 剪辑成片：把质检通过(done且verdict非fail)的镜头按 shot 顺序 ffmpeg 拼接成最终成片
+    # ⑦ 剪辑成片：把质检通过的镜头按播放顺序拼成最终成片；每镜有多候选时按 qc.score 择优
     if edit_film is not None:
         try:
-            ok_shots = [s for s in b["shots"]
-                        if s.get("status") == "done" and s.get("result")
-                        and (s.get("qc") or {}).get("verdict") in (None, "skipped", "pass", "pass_with_notes")]
-            # 保底：若严格过滤后为空，退而取所有 done 的镜头（至少能拼出可看的粗剪）
-            if not ok_shots:
-                ok_shots = [s for s in b["shots"] if s.get("status") == "done" and s.get("result")]
-            if ok_shots:
-                order = sorted(ok_shots, key=lambda s: s["shot_id"])
-                files = [s["result"] for s in order]
+            selected_files = _pick_best_per_group(b)
+            if not selected_files:
+                # 保底：严格择优为空，退而取所有 done 镜头（至少能拼出可看的粗剪）
+                done = [s for s in b["shots"] if s.get("status") == "done" and s.get("result")]
+                selected_files = [(s.get("group_id") or s["shot_id"], s["result"]) for s in done]
+            if selected_files:
+                files = [p for _gid, p in sorted(selected_files, key=lambda x: x[0])]
                 ed = edit_film(film_id, files, FILM_DIR)
                 if ed.get("ok"):
                     b["film"] = {
@@ -223,13 +221,40 @@ def _run_batch(film_id):
                         json.dump(ed["c07"], _f, ensure_ascii=False, indent=1)
                     b["updated_at"] = int(time.time())
                     save_batch(b)
-                    log("[%s] ⑦剪辑成片完成 -> %s（%d 镜）" % (film_id, ed["out_path"], len(files)))
+                    log("[%s] ⑦剪辑成片完成 -> %s（%d 镜，按质检 score 择优）"
+                        % (film_id, ed["out_path"], len(files)))
                 else:
                     log("[%s] ⑦剪辑失败：%s" % (film_id, ed.get("error")))
             else:
                 log("[%s] ⑦无可用素材拼接（没有 done 镜头）" % film_id)
         except Exception as e:
             log("[%s] ⑦剪辑异常：%s" % (film_id, e))
+
+
+def _pick_best_per_group(batch):
+    """每镜(group_id)从过检候选里挑 qc.score 最高且 result 存在的一条。
+
+    过检 = verdict ∈ {pass, pass_with_notes, skipped, None}（客观未 fail、质检未报错）。
+    返回 [(group_id, result_path), ...]，按 group_id 字典序稳定排序。
+    若某镜没有任何过检候选，该镜不进成片（缺失镜如实反映，不硬拼废片）。
+    """
+    GOOD = ("pass", "pass_with_notes", "skipped")
+    by_group = {}
+    for s in batch["shots"]:
+        if not s.get("result"):
+            continue
+        verdict = (s.get("qc") or {}).get("verdict")
+        if verdict not in GOOD and verdict is not None:
+            continue  # fail / error / 其他 → 不选该候选
+        gid = s.get("group_id") or s["shot_id"]
+        score = (s.get("qc") or {}).get("score")
+        score = score if isinstance(score, (int, float)) else -1
+        cur = by_group.get(gid)
+        if cur is None or score > cur[0]:
+            by_group[gid] = (score, s["result"])
+    out = [(gid, res) for gid, (score, res) in by_group.items()]
+    out.sort(key=lambda x: x[0])
+    return out
 
 
 MAX_QC_RETRY = 2   # 单镜质检不通过，最多换种子自动重试次数（含首次=2次出片）
@@ -455,6 +480,7 @@ class BatchHandler(BaseHTTPRequestHandler):
                 seen.add(sid)
                 clean.append({
                     "shot_id": sid,
+                    "group_id": str(s.get("group_id") or s.get("shot_id") or sid),
                     "status": "pending",
                     "workflow": s.get("workflow"),
                     "qc_targets": s.get("qc_targets") or {},
@@ -494,6 +520,7 @@ def _public(b):
         "film": b.get("film"),
         "shots": [{
             "shot_id": s["shot_id"],
+            "group_id": s.get("group_id") or s["shot_id"],
             "status": s.get("status"),
             "result": s.get("result"),
             "error": s.get("error"),

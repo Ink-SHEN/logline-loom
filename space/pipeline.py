@@ -475,12 +475,16 @@ def build_all_gen_requests(shotlist_doc, offline=False):
     return out, summary, degraded_any
 
 
-def batch_plan_to_workflows(gen_items, default_seed=None, aspect_text=None):
+def batch_plan_to_workflows(gen_items, default_seed=None, aspect_text=None,
+                            candidates_per_shot=1):
     """把逐镜 c04 的 generation 转成给调度器的 T2V workflow dict 清单。
 
-    返回 [{ shot_id, workflow_type, workflow, qc_targets }]，workflow 由
-    generate.build_t2v_workflow 生成。qc_targets 携带该镜时长与画幅，供 Spark 端 ⑥ 质检。
-    seed 缺省用时间派生的随机种子；prefix 形如 film/S<shot>，便于 Spark 归档。
+    每镜按 candidates_per_shot 展开成多份候选（同 prompt、不同 seed），让 Spark 逐候选
+    真生成、逐候选质检，⑦ 剪辑择优。候选 shot_id 形如 S001_c00 / S001_c01 / S001_c02，
+    并携带 group_id（= 无候选后缀的镜号 S001）供 Spark 按镜分组取最高分。
+
+    返回 [{ shot_id, group_id, workflow_type, workflow, qc_targets }]。
+    seed 缺省用时间派生的随机种子；prefix 形如 film/S<shot>_c<n>，便于 Spark 归档。
     """
     from . import generate as _g
     import random as _r
@@ -495,12 +499,18 @@ def batch_plan_to_workflows(gen_items, default_seed=None, aspect_text=None):
         except Exception:
             seconds = 5.0
         sid = str(it["shot_id"])
-        seed = default_seed if default_seed is not None else _r.randint(1, 2 ** 31 - 1)
         num = "".join(ch for ch in sid if ch.isdigit()) or "0"
-        prefix = "film/S%s" % num
-        wf = _g.build_t2v_workflow(prompt, seconds, seed=seed, prefix=prefix)
-        out.append({"shot_id": sid, "workflow_type": "T2V", "workflow": wf,
-                    "qc_targets": {"duration_seconds": round(seconds, 2),
-                                   "aspect_ratio_text": aspect_text or "16:9 (Widescreen)",
-                                   "megapixels": None}})
+        group = "S%s" % num
+        n = max(1, int(candidates_per_shot or 1))
+        base_seed = default_seed if default_seed is not None else _r.randint(1, 2 ** 31 - 1)
+        base_seed += 31 * len(out)  # 每镜推进一段，保证跨镜 seed 不撞
+        for ci in range(n):
+            cid = "%s_c%02d" % (group, ci)
+            wf = _g.build_t2v_workflow(prompt, seconds,
+                                       seed=base_seed + ci, prefix="film/%s" % cid)
+            out.append({"shot_id": cid, "group_id": group, "workflow_type": "T2V",
+                        "workflow": wf,
+                        "qc_targets": {"duration_seconds": round(seconds, 2),
+                                       "aspect_ratio_text": aspect_text or "16:9 (Widescreen)",
+                                       "megapixels": None}})
     return out

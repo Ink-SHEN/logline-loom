@@ -209,11 +209,17 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, requested
         # —— 其余镜头整片下发给 Spark 调度器 ——
         try:
             shots_c03 = (shotlist.get("payload") or {}).get("shots") or []
-            sid_set = {g["shot_id"] for g in gen_items}
+            bp = ((shotlist.get("payload") or {}).get("batch_plan")) or {}
+            try:
+                cps = max(1, int(bp.get("candidates_per_shot") or 1))
+            except Exception:
+                cps = 1
             film_id = (brief["envelope"]["artifact_id"].replace("brief.", "film_"))
-            # 只下发非首镜
-            rest = pipeline.batch_plan_to_workflows(gen_items[1:], default_seed=random.randint(1, 2 ** 31 - 1),
-                                                    aspect_text=aspect)
+            # 只下发非首镜（首镜已即时真生成，见上）
+            rest = pipeline.batch_plan_to_workflows(gen_items[1:],
+                                                    default_seed=random.randint(1, 2 ** 31 - 1),
+                                                    aspect_text=aspect,
+                                                    candidates_per_shot=cps)
             if rest:
                 r = generate.submit_batch(film_id, rest)
                 batch_note = ("\n\n**整片任务已下发给 Spark 调度器**（film_id `%s`，%d 个后续镜头，"

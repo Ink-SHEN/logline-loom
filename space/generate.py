@@ -254,6 +254,7 @@ def submit_batch(film_id, shots):
     base = _base()
     payload = {"shots": [{
         "shot_id": s["shot_id"],
+        "group_id": s.get("group_id") or s.get("shot_id") or s["shot_id"],
         "workflow_type": s.get("workflow_type") or "T2V",
         "workflow": s["workflow"],
         "qc_targets": s.get("qc_targets") or {},
