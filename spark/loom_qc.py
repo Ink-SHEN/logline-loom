@@ -16,6 +16,21 @@ import os
 import re
 import subprocess
 
+# 视觉质检模块（同目录，可选）：主观画面项用 VL 模型看帧判定
+sys_path = os.path.dirname(os.path.abspath(__file__))
+try:
+    import sys as _sys
+    if sys_path not in _sys.path:
+        _sys.path.insert(0, sys_path)
+    from loom_vision import vision_judge, VISION_SCOPE
+except Exception as _e:
+    vision_judge = None
+    VISION_SCOPE = ["prompt_adherence", "character_consistency", "scene_consistency",
+                    "no_visual_artifact", "no_red_line_violation"]
+    _VISION_IMPORT_ERR = str(_e)
+else:
+    _VISION_IMPORT_ERR = ""
+
 OBJECTIVE = [
     "duration_in_range", "fps_is_24", "has_video_stream", "has_audio_stream",
     "audio_32k_stereo", "resolution_matches_aspect_ratio",
@@ -205,44 +220,107 @@ def objective_checks(probe, targets):
     return out
 
 
-def build_c06(shot_id, probe, targets):
-    """组一份 c06 报告（客观项 + 主观 7 项标 skipped 未接入视觉复核）。"""
+def build_c06(shot_id, probe, targets, vision=None, vision_target_note=""):
+    """组一份 c06 报告（客观项 + 主观项）。
+
+    vision: 若提供了视觉质检结果({findings:[{name,status,detail,measured}],...})，
+    用它填对应主观画面项；没判到的项标 skipped（注明未复核）。motion/audio 静帧判不了，
+    一律标 skipped。未提供 vision → 主观项全 skipped（现状）。
+    """
     objective = objective_checks(probe, targets)
-    # 主观 7 项：无人复核、无视觉模型 → skipped，detail 注明判不了
-    subjective = [{"name": n, "status": "skipped",
-                   "detail": "未接入人工复核/视觉模型，判不了（创空间批量模式）"} for n in SUBJECTIVE]
+
+    # 主观项：有视觉判定则填充画面 5 项，否则全 skipped
+    sub_map = {}
+    if vision and vision.get("ok") and vision.get("findings"):
+        for f in vision["findings"]:
+            sub_map[f["name"]] = f
+    sub_md = "视觉模型 %s 已看帧复核" % vision.get("model") if vision and vision.get("ok") else "未接入视觉复核，判不了（创空间批量模式）"
+    subjective = []
+    for n in SUBJECTIVE:
+        if n in sub_map:
+            c = sub_map[n]
+            item = {"name": n, "status": c.get("status", "skipped")}
+            if c.get("detail"):
+                item["detail"] = c["detail"]
+            if c.get("measured"):
+                item["measured"] = c["measured"]
+            subjective.append(item)
+        elif vision and vision.get("ok") and n in VISION_SCOPE:
+            # 视觉通道本该判但没判 → 显式标未复核，不假装
+            subjective.append({"name": n, "status": "skipped",
+                               "detail": "视觉模型本轮未判该项，按未复核处理"})
+        else:
+            subjective.append({"name": n, "status": "skipped",
+                               "detail": sub_md})
     checks = objective + subjective
     obj_fails = [c["name"] for c in objective if c["status"] == "fail"]
-    failed_items = list(obj_fails)  # 主观全 skipped，无 fail
+    sub_fails = [c["name"] for c in subjective if c["status"] == "fail"]
+    sub_notes = [c["name"] for c in subjective
+                 if c["status"] in ("skipped", "pass_with_notes")]
+    failed_items = list(obj_fails) + list(sub_fails)
+    has_vision = bool(vision and vision.get("ok"))
 
-    # verdict / route_to：客观有 fail → fail(human, 不自动重试，留给人看报告决定)；
-    # 否则主观判不了 → pass_with_notes + human
+    # verdict / route_to：
+    #  客观有 fail → fail(human, 不自动重试)
+    #  否则主观有 fail → fail(可换seed/候选自动重试——画面问题多是该 seed 生成异常，值得重跑)
+    #  否则主观有未复核且无视觉 → pass_with_notes + human(与现状一致)
+    #  视觉全看过且全过 → pass(route_to=edit, 可直接进剪辑)
     if obj_fails:
         verdict, route_to = "fail", "human"
         suggested = {"action": "manual_intervention", "patch": {},
-                     "rationale": "客观项失败（%s）。批量模式下不自动重试，留人工核对 ffprobe 与提示词" % "、".join(obj_fails)}
-    else:
+                     "rationale": "客观项失败（%s）。批量模式下客观问题不自动重试，留人工核对 ffprobe 与提示词"
+                     % "、".join(obj_fails)}
+    elif sub_fails:
+        verdict, route_to = "fail", "retry"
+        suggested = {"action": "new_seed", "patch": {},
+                     "rationale": "画面主观项失败（%s）——该候选 seed 生成画面不达标，换种子/换候选重试"
+                     % "、".join(sub_fails)}
+        if not has_vision:
+            route_to, verdict = "human", "fail"
+            suggested = {"action": "manual_intervention", "patch": {},
+                         "rationale": "有主观项 fail 但没接视觉复核（不该发生，可能是异常数据），转人工"}
+    elif sub_notes and not has_vision:
         verdict, route_to = "pass_with_notes", "human"
         suggested = {"action": "manual_intervention", "patch": {},
-                     "rationale": "客观项全过；主观画面/角色项未接入视觉复核，转人工确认"}
+                     "rationale": "客观项全过；主观画面项未接入视觉复核（%s 待复核），转人工确认"
+                     % "、".join(sub_notes)}
+    else:
+        # 客观全过 + (视觉全看过 或 无主观项判不了却都过)
+        verdict, route_to = "pass", "edit"
+        suggested = {"action": "pass", "patch": {},
+                     "rationale": "客观项全过，视觉复核判定符合要求（%s）" % vision_target_note or "素材技术指标达标"}
+
+    score = 10.0 - 2.0 * len(obj_fails) - 2.0 * len(sub_fails)
+    if has_vision and vision.get("score") is not None:
+        try:
+            score = round(score * 0.5 + float(vision["score"]) * 0.5, 1)
+        except Exception:
+            pass
+    else:
+        score = round(score, 1)
 
     return {
         "shot_id": shot_id,
         "candidate_id": "%s_c00" % shot_id,
         "verdict": verdict,
-        "score": round(10 - 2 * len(obj_fails), 1),
+        "score": score,
         "checks": checks,
         "failed_items": failed_items,
         "route_to": route_to,
         "retry_count": 0,
         "max_retries": 0,
         "suggested_change": suggested,
+        "vision_source": vision.get("model") if vision and vision.get("ok") else None,
         "gate": {"required": False, "status": "not_required"},
     }
 
 
-def qc_mp4(path, targets):
-    """对外入口：对单个成片跑质检。返回 {ok, probe?, c06?}。"""
+def qc_mp4(path, targets, vision_ctx=None):
+    """对外入口：对单个成片跑质检。返回 {ok, probe?, c06?}。
+
+    vision_ctx(可选): {target_text, brief_text, count, model, api_key, base_url}
+    提供则客观过检后调视觉模型判主观画面项，合成完整 c06。
+    """
     ff = find_ffprobe()
     if not ff:
         return {"ok": False, "error": "ffprobe 不可用"}
@@ -251,7 +329,30 @@ def qc_mp4(path, targets):
     probe = probe_mp4(path)
     if probe is None:
         return {"ok": False, "error": "ffprobe 解析失败"}
-    c06 = build_c06(os.path.splitext(os.path.basename(path))[0], probe, targets)
+    shot_id = os.path.splitext(os.path.basename(path))[0]
+    vision = None
+    vision_target_note = ""
+    if vision_ctx and vision_judge is not None:
+        try:
+            api_key = vision_ctx.get("api_key") or os.environ.get("LOOM_LLM_API_KEY") \
+                or os.environ.get("LOOM_VISION_API_KEY") or ""
+            if api_key and vision_ctx.get("target_text"):
+                vr = vision_judge(
+                    path, vision_ctx["target_text"],
+                    brief_text=vision_ctx.get("brief_text") or "",
+                    count=int(vision_ctx.get("count") or 3),
+                    model=vision_ctx.get("model"),
+                    base_url=vision_ctx.get("base_url"),
+                    api_key=api_key)
+                if vr.get("ok"):
+                    vr["model"] = vision_ctx.get("model") or os.environ.get("LOOM_VISION_MODEL") \
+                        or "Qwen/Qwen3-VL-235B-A22B-Instruct"
+                    vision = vr
+                    vision_target_note = "目标：%s" % vision_ctx["target_text"][:80]
+        except Exception as _e:
+            vision = None
+    c06 = build_c06(shot_id, probe, targets, vision=vision,
+                    vision_target_note=vision_target_note)
     return {"ok": True, "probe": probe, "c06": c06}
 
 

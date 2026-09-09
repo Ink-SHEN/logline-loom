@@ -307,15 +307,23 @@ def _gen_one(batch, shot):
         shot["status"] = "done"
         shot["finished_at"] = int(time.time())
 
-        # ⑥ 客观质检
+        # ⑥ 客观质检 + 可选视觉复核(主观项)
         verdict, _route = "pass", "edit"
         if qc_mp4 is not None:
             targets = shot.get("qc_targets") or {}
+            vision_ctx = None
+            pen = targets.get("prompt_en") or ""
+            if pen:
+                vision_ctx = {"target_text": pen,
+                              "brief_text": os.environ.get("LOOM_RED_LINES") or "",
+                              "model": os.environ.get("LOOM_VISION_MODEL") or None,
+                              "api_key": os.environ.get("LOOM_LLM_API_KEY")
+                              or os.environ.get("LOOM_VISION_API_KEY") or ""}
             qc = qc_mp4(dest, {
                 "duration_seconds": targets.get("duration_seconds"),
                 "aspect_ratio_text": targets.get("aspect_ratio_text"),
                 "megapixels": targets.get("megapixels"),
-            })
+            }, vision_ctx=vision_ctx if (vision_ctx and vision_ctx.get("api_key")) else None)
             if qc.get("ok"):
                 safe_id = re.sub(r"[^A-Za-z0-9._-]", "_", shot.get("shot_id") or "shot")
                 shot["qc"] = {
@@ -342,21 +350,22 @@ def _gen_one(batch, shot):
                                                  attempts + 1, verdict, dest))
         save_batch(batch)
 
-        # 打回判断：客观 fail 且属于可自动修类 → 换种子重试（达上限停）
-        if verdict == "fail" and _is_retryable_fail(shot) and attempts < max_retries:
+        # 打回判断：客观可修(缺流/音频) 或 视觉主观 fail(route_to=retry) → 换种子重试（达上限停）
+        rt = (shot.get("qc") or {}).get("route_to")
+        if verdict == "fail" and (rt == "retry" or _is_retryable_fail(shot)) and attempts < max_retries:
             attempts += 1
             shot["retry_count"] = attempts
-            log("[%s] %s 质检fail（%s），换种子自动重试 %d/%d"
+            log("[%s] %s 质检fail（%s）route=%s，换种子自动重试 %d/%d"
                 % (batch["film_id"], shot["shot_id"],
-                   "、".join(shot["qc"].get("failed_items") or []), attempts, max_retries))
+                   "、".join(shot["qc"].get("failed_items") or []), rt, attempts, max_retries))
             attempt_wf = _with_new_seed(base_wf)
             continue
         # 人工类 fail / 达到上限 / 通过 → 定案
         if verdict == "fail":
             shot["qc"]["route_to"] = "human"
-            shot["qc"]["note"] = ("质检 fail，失败项 %s 不属于可自动修复类，或已达重试上限，"
+            shot["qc"]["note"] = ("质检 fail（%s），失败项 %s 不属于可自动修复类，或已达重试上限，"
                                   "留人工核对 ffprobe 报告/提示词"
-                                  % "、".join(shot["qc"].get("failed_items") or []))
+                                  % (rt, "、".join(shot["qc"].get("failed_items") or [])))
         return
 
 
@@ -538,6 +547,9 @@ class Server(ThreadingHTTPServer):
 def main():
     global TOKEN
     env = load_env()
+    # 把 loom.env 里的配置同步进 os.environ，让子进程/质检(视觉VL)能读到
+    for k, v in env.items():
+        os.environ.setdefault(k, v)
     TOKEN = env.get("LOOM_PROXY_TOKEN") or os.environ.get("LOOM_PROXY_TOKEN") or ""
     if not TOKEN:
         print("LOOM_PROXY_TOKEN 未配置 —— 拒绝启动", file=sys.stderr)
