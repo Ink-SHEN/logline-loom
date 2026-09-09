@@ -13,6 +13,11 @@ pgrep -f "[l]oom_proxy.py" >/dev/null && echo "  进程：在" || echo "  进程
 echo -n "  无 token 访问（期望 401）："
 curl -s -m 3 -o /dev/null -w "HTTP %{http_code}\n" http://127.0.0.1:8188/system_stats
 
+echo "── 整片调度器（127.0.0.1:8388，代理 /batch/* 转发） ──"
+pgrep -f "[l]oom_batch.py" >/dev/null && echo "  进程：在" || echo "  进程：❌ 不在"
+echo -n "  本地可达（无 token，期望 401）："
+curl -s -m 3 -o /dev/null -w "HTTP %{http_code}\n" http://127.0.0.1:8388/batch/nonexistent
+
 echo "── natapp 隧道 ──"
 pgrep -x natapp >/dev/null && echo "  进程：在" || echo "  进程：❌ 不在"
 URL=$(cat "$L/tunnel_url" 2>/dev/null)

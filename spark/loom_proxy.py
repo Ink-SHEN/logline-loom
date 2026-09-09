@@ -32,6 +32,8 @@ LOG_FILE = os.path.join(HERE, "proxy.log")
 
 # 上游 ComfyUI（只监听回环，公网碰不到）
 UPSTREAM = "http://127.0.0.1:8288"
+# 整片调度器（loom_batch.py，只监听回环，公网碰不到）——创空间经 /batch/* 分流过来
+BATCH_UPSTREAM = "http://127.0.0.1:8388"
 LISTEN_PORT = 8188
 
 # 放行前缀。创空间用到的就这些，其余一律 403。
@@ -43,6 +45,7 @@ ALLOW_PREFIXES = (
     "/object_info",    # 查可用节点（排障用）
     "/queue",          # 只看队列长度（DELETE 已在下面拦掉）
     "/upload/",        # 首帧图（I2V/R2V 用）
+    "/batch/",         # 整片调度器（loom_batch.py）的路径前缀
 )
 
 # 单 IP 限流：创空间的并发很低，这里只是防扫描/防刷
@@ -149,17 +152,24 @@ class ProxyHandler(BaseHTTPRequestHandler):
 
         if not path.startswith(ALLOW_PREFIXES):
             return self._deny(403, "路径不在白名单内：%s" % path)
-        if method in ("DELETE",):
+        # ComfyUI 的破坏性方法一律拒绝；但 /batch/* 的 DELETE（清理批次）要放行
+        if method in ("DELETE",) and not path.startswith("/batch/"):
             return self._deny(405, "不允许破坏性方法：%s" % method)
 
         n = int(self.headers.get("Content-Length") or 0)
         body = self.rfile.read(n) if n else None
 
-        upstream = UPSTREAM + path + (("?" + parts.query) if parts.query else "")
+        # 分流：/batch/* 走整片调度器，其余走 ComfyUI
+        target = BATCH_UPSTREAM if path.startswith("/batch/") else UPSTREAM
+        upstream = target + path + (("?" + parts.query) if parts.query else "")
         req = urllib.request.Request(upstream, data=body, method=method)
         for k in ("Content-Type", "Accept", "Range"):
             if self.headers.get(k):
                 req.add_header(k, self.headers.get(k))
+        # 转发到调度器(8388)时补上鉴权头——proxy 已验过 incoming token 与 TOKEN 一致，
+        # 而 loom_batch 与 loom_proxy 共享同一 LOOM_PROXY_TOKEN，所以主动带上它即可。
+        if TOKEN:
+            req.add_header("Authorization", "Bearer %s" % TOKEN)
 
         acquired = _sem.acquire(timeout=30)
         if not acquired:
@@ -173,7 +183,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
             payload = raw.read()
         except Exception as e:
             log("error %s %s -> %s" % (method, path, e))
-            return self._deny(502, "访问 ComfyUI 失败：%s" % e)
+            return self._deny(502, "访问后端失败：%s" % e)
         finally:
             _sem.release()
 
@@ -193,6 +203,9 @@ class ProxyHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         self._relay("POST")
+
+    def do_DELETE(self):
+        self._relay("DELETE")
 
     def do_HEAD(self):
         self._relay("HEAD")
