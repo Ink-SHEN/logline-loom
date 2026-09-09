@@ -212,7 +212,8 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, requested
             sid_set = {g["shot_id"] for g in gen_items}
             film_id = (brief["envelope"]["artifact_id"].replace("brief.", "film_"))
             # 只下发非首镜
-            rest = pipeline.batch_plan_to_workflows(gen_items[1:], default_seed=random.randint(1, 2 ** 31 - 1))
+            rest = pipeline.batch_plan_to_workflows(gen_items[1:], default_seed=random.randint(1, 2 ** 31 - 1),
+                                                    aspect_text=aspect)
             if rest:
                 r = generate.submit_batch(film_id, rest)
                 batch_note = ("\n\n**整片任务已下发给 Spark 调度器**（film_id `%s`，%d 个后续镜头，"
@@ -239,11 +240,20 @@ def query_batch_progress(film_id):
     lines = ["整片任务 `%s` · 批次状态：**%s**" % (r.get("film_id"), r.get("status"))]
     st_map = {"pending": "排队中", "queued": "排队中", "running": "生成中",
               "done": "✅ 完成", "error": "❌ 失败"}
+    qc_map = {"pass": "质检✅", "pass_with_notes": "质检⚠️", "fail": "质检❌",
+              "error": "质检error", "skipped": "未质检"}
     for s in r.get("shots", []):
         mark = st_map.get(s.get("status"), s.get("status"))
         p = s.get("result") or ""
         base = os.path.basename(p) if p else ""
-        lines.append("- `%s`：%s%s" % (s.get("shot_id"), mark, (" → %s" % base) if base else ""))
+        qc = s.get("qc") or {}
+        qc_line = ""
+        if s.get("status") == "done" and qc:
+            v = qc.get("verdict", "?")
+            fails = qc.get("failed_items") or []
+            qc_line = " · %s%s" % (qc_map.get(v, v), ("（失败项：%s）" % "、".join(fails)) if fails else "")
+        lines.append("- `%s`：%s%s%s" % (s.get("shot_id"), mark,
+                                         (" → %s" % base) if base else "", qc_line))
     return "\n".join(lines)
 
 

@@ -248,14 +248,15 @@ def replay_note():
 def submit_batch(film_id, shots):
     """把一份镜头清单 POST 给 Spark 整片调度器。
 
-    shots: [{ shot_id, workflow_type, workflow }]，workflow 是已填好的 ComfyUI dict
-    （T2V 收敛，由调用方 build_t2v_workflow 生成）。经隧道同一入口的 /batch/* 转发。
+    shots: [{ shot_id, workflow_type, workflow, qc_targets? }]，workflow 是已填好的
+    ComfyUI dict（T2V 收敛，由调用方 build_t2v_workflow 生成）。经隧道 /batch/* 转发。
     """
     base = _base()
     payload = {"shots": [{
         "shot_id": s["shot_id"],
         "workflow_type": s.get("workflow_type") or "T2V",
         "workflow": s["workflow"],
+        "qc_targets": s.get("qc_targets") or {},
     } for s in shots]}
     req = urllib.request.Request(base + "/batch/" + str(film_id),
                                  data=json.dumps(payload).encode("utf-8"),
