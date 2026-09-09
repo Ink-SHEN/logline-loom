@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="x9HahqjYEHCCKBfA43vALz">
+<head data-page-node-id="9Cav2d594lOWKdofM77ljK">
+<meta charset="UTF-8" data-page-node-id="dfhuSDYFhuqcJ6vWxKAfOC">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="1Nc3jiHTjQa6DD2FFqIKDQ">
+<title>LOOM 使用指南 · 一句话生成一部 AI 短片</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --ink:#1a1d24; --ink2:#5b6472; --ink3:#8a94a3;
+    --line:#e6e9ee; --line2:#d7dce4;
+    --violet:#534ab7; --violet-bg:#eeedfe; --violet-line:#d7d3f5;
+    --teal:#0f6e56; --teal-bg:#e1f5ee; --teal-line:#b5e6d3;
+    --amber:#854f0b; --amber-bg:#faeeda; --amber-line:#efdcb0;
+    --red:#a32d2d; --red-bg:#fcebeb; --red-line:#f4caca;
+    --blue:#185fa5; --blue-bg:#e6f1fb;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.7;font-size:15px}
+  .wrap{max-width:860px;margin:0 auto;padding:40px 20px 80px}
+  /* hero */
+  .hero{background:linear-gradient(135deg,#fff 0%,#f1effd 100%);border:1px solid var(--line);border-radius:20px;padding:38px 40px;margin-bottom:34px}
+  .badge{display:inline-flex;align-items:center;gap:7px;background:var(--violet-bg);color:var(--violet);border:1px solid var(--violet-line);font-size:13px;font-weight:600;padding:4px 12px;border-radius:999px;margin-bottom:16px}
+  .badge .dot{width:7px;height:7px;border-radius:50%;background:var(--violet)}
+  h1{font-size:30px;font-weight:700;letter-spacing:-.5px;margin-bottom:10px}
+  .hero p.sub{color:var(--ink2);font-size:16px;max-width:640px}
+  .hero .urlbar{margin-top:22px;background:#fff;border:1px solid var(--line2);border-radius:12px;padding:13px 16px;display:flex;align-items:center;gap:10px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--ink2);word-break:break-all}
+  .hero .urlbar .tag{flex-shrink:0;background:var(--teal-bg);color:var(--teal);font-weight:600;padding:2px 9px;border-radius:6px;font-size:12px;font-family:-apple-system,"PingFang SC",sans-serif}
+
+  /* section */
+  section{margin-bottom:44px}
+  .sec-h{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .sec-num{width:34px;height:34px;border-radius:10px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;flex-shrink:0}
+  .sec-num.violet{background:var(--violet)} .sec-num.teal{background:var(--teal)}
+  .sec-num.amber{background:var(--amber)} .sec-num.blue{background:var(--blue)}
+  h2{font-size:22px;font-weight:700}
+  h3{font-size:16px;font-weight:700;margin:22px 0 10px}
+  .lead{color:var(--ink2);margin-bottom:8px}
+
+  /* card */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-bottom:14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+
+  /* 步骤步骤 */
+  .steps{counter-reset:step}
+  .step{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px 18px 58px;margin-bottom:12px}
+  .step::before{counter-increment:step;content:counter(step);position:absolute;left:18px;top:18px;width:26px;height:26px;border-radius:50%;background:var(--violet-bg);color:var(--violet);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;border:1px solid var(--violet-line)}
+  .step b{font-size:15px}
+  .step p{color:var(--ink2);font-size:14px;margin-top:3px}
+
+  /* 真生成/回放 */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:640px){.two{grid-template-columns:1fr}}
+  .livenote{border-radius:14px;padding:18px 20px;border:1px solid}
+  .livenote.good{background:var(--teal-bg);border-color:var(--teal-line)}
+  .livenote.fallback{background:var(--amber-bg);border-color:var(--amber-line)}
+  .livenote h4{font-size:15px;display:flex;align-items:center;gap:8px}
+  .livenote.good h4{color:var(--teal)} .livenote.fallback h4{color:var(--amber)}
+  .livenote p{font-size:14px;color:var(--ink);margin-top:6px}
+  .chip{display:inline-block;font-size:12px;font-weight:700;padding:2px 10px;border-radius:999px;margin-right:6px}
+  .chip.real{background:#fff;color:var(--teal);border:1px solid var(--teal-line)}
+  .chip.replay{background:#fff;color:var(--amber);border:1px solid var(--amber-line)}
+
+  /* 提示 */
+  .tip{display:flex;gap:12px;background:var(--blue-bg);border:1px solid #c7dcf2;border-radius:12px;padding:14px 16px;margin:10px 0;font-size:14px}
+  .warn{display:flex;gap:12px;background:var(--red-bg);border:1px solid var(--red-line);border-radius:12px;padding:14px 16px;margin:10px 0;font-size:14px;color:#6e1f1f}
+
+  /* 表 */
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:14px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line)}
+  th{background:#fbfbfc;font-weight:600;color:var(--ink2);font-size:13px}
+  tr:last-child td{border-bottom:none}
+  td code, .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;background:#f1f2f5;padding:1px 6px;border-radius:5px;color:var(--ink)}
+
+  /* 管线流 */
+  .pipe{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin:16px 0}
+  .pnode{flex:1;min-width:92px;border-radius:11px;padding:12px 8px;text-align:center;font-size:13px;font-weight:600;position:relative}
+  .pnode .en{display:block;font-size:11px;font-weight:400;opacity:.75;margin-top:2px}
+  .parrow{display:flex;align-items:center;color:#c3c9d4;font-weight:700;padding:0 3px}
+  @media(max-width:640px){.pipe{display:grid;grid-template-columns:1fr 1fr}.parrow{display:none}}
+  .c1{background:#f0effc;color:#3c3489;border:1px solid #d8d4f7}
+  .c2{background:#e6f1fb;color:#0c447c;border:1px solid #c4d9ee}
+  .c3{background:#e1f5ee;color:#085041;border:1px solid #b6e5d2}
+  .c4{background:#faeeda;color:#633806;border:1px solid #efdcb0}
+  .c5{background:#fdf0ec;color:#712b13;border:1px solid #f6d0c2}
+  .gray{color:#8a94a3;font-size:13px;text-align:center;margin-top:6px}
+
+  .footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--line);color:var(--ink3);font-size:13px;text-align:center}
+  ol li{margin-bottom:8px}
+  ul{padding-left:20px}
+  ul li{margin-bottom:6px}
+</style>
+</head>
+<body data-page-node-id="r7X0jZeg945u7dZRx4uh4F">
+<div class="wrap" data-page-node-id="50w7AopcEjCjABxYEN6ys3">
+
+  <!-- HERO -->
+  <div class="hero" data-page-node-id="1WHXZXuXupXbnEXxxjBkkr">
+    <div class="badge" data-page-node-id="XGLVozyz65OTMBP0xPe5J1"><span class="dot" data-page-node-id="pQpJw4AiAHCBGySUuRWSxe"></span>AI+∞ 开发者创作大赛 · 电影 Agent</div>
+    <h1 data-page-node-id="FzC37Dllkaw5r4WIKhIoIY">LOOM · 一句话生成一部 AI 短片</h1>
+    <p class="sub" data-page-node-id="yslzILTjYiFWvUdEe9ODwb">你只需写一句「一句话故事」，LOOM 会自动让 7 个分工明确的 Agent 接力把它一步步变成剧本、镜头、提示词，并尝试在 DGX Spark 上真生成成片。</p>
+    <div class="urlbar" data-page-node-id="HVCuMDkya1ghOTWYQnJUse"><span class="tag" data-page-node-id="sLacbRCNsSoeqJtD6kiWuc">在线体验</span>www.modelscope.cn/studios/Incion/LOOM</div>
+  </div>
+
+  <!-- 1 这是什么 -->
+  <section data-page-node-id="EFaGYg6PcJGmQPpsxbJYz9">
+    <div class="sec-h" data-page-node-id="ZQRfhyLZniUHVhj90OWHQA"><div class="sec-num violet" data-page-node-id="Fy3r23oUph9zbR2aVBN1Ut">1</div><h2 data-page-node-id="5DRAF0btovOpYkychawX1N">它是什么？</h2></div>
+    <p class="lead" data-page-node-id="tuuwXZ8HAUUyDhl3RIoDB0">LOOM 是一个「电影智能体」——不是聊天机器人，而是一条帮你把一句话变成一部短片的自动化产线。</p>
+    <div class="pipe" data-page-node-id="1xoGF9MXrr7LZtQwbsaPlO">
+      <div class="pnode c1" data-page-node-id="qBQA2i6gt0aL1kksFhCusc">① 片约<span class="en" data-page-node-id="mEc5oQfThr1LrNCpG16VhV">你写一句话</span></div>
+      <div class="parrow" data-page-node-id="k8HjipD3m0mBDQsl05M9Gf">›</div>
+      <div class="pnode c2" data-page-node-id="XCtNmRfSc1mxIDwC3nAB2X">② 编剧<span class="en" data-page-node-id="jCFNAo0HKYHvUMSVRC0yZT">扩成完整剧本</span></div>
+      <div class="parrow" data-page-node-id="0rKdpTSgSACasjqhv1sRGH">›</div>
+      <div class="pnode c3" data-page-node-id="w5p1pwiNkn540vMte4nfcR">③ 分镜<span class="en" data-page-node-id="SAMNjAQp9iOHG5op5im2Ys">拆成 6–8 个镜头</span></div>
+      <div class="parrow" data-page-node-id="tpRqnYFvS33azzwLPaBXOb">›</div>
+      <div class="pnode c4" data-page-node-id="myWjtngD0PwWgO0OW9tCX1">④ 提示词<span class="en" data-page-node-id="oXYQykzuhsgscwEGASBiZD">写 AI 生成指令</span></div>
+      <div class="parrow" data-page-node-id="ZqjVcnzm7wZAUw9Hs98Ajn">›</div>
+      <div class="pnode c5" data-page-node-id="D698g4s0z501rHPVZa7Psd">⑤ 生成<span class="en" data-page-node-id="Dq9faecPS0hFO2GrxBkI9j">跑出镜头视频</span></div>
+    </div>
+    <p class="gray" data-page-node-id="xChredZvqxvo4BDxdRytUJ">每走一步，中间产物（片约 / 剧本 / 分镜 / 提示词）都会在页面下方存成一份 JSON「契约」，随时可查、可反查。</p>
+  </section>
+
+  <!-- 2 三步上手 -->
+  <section data-page-node-id="RdILqALpGpSrcxeg1YDqPj">
+    <div class="sec-h" data-page-node-id="BiRHTV4zciRHpnKOCubBkH"><div class="sec-num teal" data-page-node-id="BCgOSrqKxMp4pjl7gaUvW6">2</div><h2 data-page-node-id="4a7kaqUJ92IFeHbJUXyW1f">三步上手</h2></div>
+    <div class="steps" data-page-node-id="8vQMcOHBtF0zqHbLhanfnv">
+      <div class="step" data-page-node-id="jZAyspPfCaLv2Ex85JXHm8"><b data-page-node-id="UJSBpZelsrm8hVcRiNF41U">在左边输入框写一句话故事</b>
+        <p data-page-node-id="sRM9hFrhOFmorHHjqM9jFT">20–400 字都行。越具体越好——告诉它主角、处境、转折。</p></div>
+      <div class="step" data-page-node-id="WhekqxWK59aajkesJ2eCRi"><b data-page-node-id="2fykiqS4m5NTsFghHfS0N9">点蓝色「开始生成」按钮</b>
+        <p data-page-node-id="kL2lqYNWFNnSa0rHW2GYVi">右边状态栏会像流水线一样，一站一站往下跳。</p></div>
+      <div class="step" data-page-node-id="KysFjxMXRO8SFpuVxKAhQU"><b data-page-node-id="GufrrWq15KxwbxrC2AmWnr">看 5 个标签页的产物</b>
+        <p data-page-node-id="1Nxt2MrlMHq9YaysizT7Rt">片约、剧本、分镜、提示词逐段出来，最后「生成结果」给你镜头视频。</p></div>
+    </div>
+  </section>
+
+  <!-- 3 输入面板 -->
+  <section data-page-node-id="HqOu3fitGVWVjHJJz2sALQ">
+    <div class="sec-h" data-page-node-id="e22udZrVFrqUFju5kEo7iA"><div class="sec-num amber" data-page-node-id="AY4YkLDiSDtykhJ2NR1prj">3</div><h2 data-page-node-id="VhEPTY43Pppem4ugHonjTS">每个输入框什么意思</h2></div>
+    <table data-page-node-id="bzA7mh2Oe14EdCt258DfbG">
+      <tr data-page-node-id="BBC3Y549yXY0G3BfI3mxoc"><th style="width:34%" data-page-node-id="0KJ6to4fnQeUVE0ZmBOKCI">控件</th><th data-page-node-id="azMn6T5fqWPDFFl7ICNr48">填什么 / 什么意思</th></tr>
+      <tr data-page-node-id="pMdubmkLpF5TkmMnULlR11"><td data-page-node-id="Ee6cE6IuhttzoLfWy17qeB">一句话故事（logline）</td><td data-page-node-id="4LtjWkKWGQ46T2aYjitB8x"><b data-page-node-id="VSmgDeZS2FGH49Tp9ghqvN">唯一必填。</b>20–400 字的一句话剧情。例：<span class="mono" data-page-node-id="uCFROWP3kUPhWlP8UXOQva">「一位独自值守射电望远镜的夜班技师，在最后一个班次收到一段来自自己未来的信号。」</span></td></tr>
+      <tr data-page-node-id="G6ZecjbjGioe7qtCx80tou"><td data-page-node-id="fJaCra8IsbWRWtHAFYgpq3">目标时长（秒）</td><td data-page-node-id="Ao5oKxOwTNGqjS1Itt7zoL">整部片子想要多长，默认 150 秒（滑杆 60–300）。</td></tr>
+      <tr data-page-node-id="mrHvNp4UuoAynGpEaEkHVC"><td data-page-node-id="l2btfEUbDUvvHTN3W6MnGj">画幅</td><td data-page-node-id="1mK6GKx1C6LFpFhiAHtfHa">16:9 横屏 / 1:1 方屏 / 9:16 竖屏，默认 16:9。</td></tr>
+      <tr data-page-node-id="LntAYF4oGspp7jBzOW4Q8E"><td data-page-node-id="qBNjEiKJM9Agnye5sy9scy">视觉风格（可留空）</td><td data-page-node-id="rvfb84AscSUKDHGQbrnYtZ">想要的美术基调，如 <span class="mono" data-page-node-id="7zyInLZzEI6VfjaxAnrkz7">「冷蓝调赛博朋克夜景」</span>。留空则 AI 自定。</td></tr>
+      <tr data-page-node-id="MOHxRTRkCAqqb2IXRekGCA"><td data-page-node-id="EBQj2keOMgNorEywn4uEYH">声音风格（可留空）</td><td data-page-node-id="FtfU0MYjvu44I3H4Y2wgvn">配乐 / 氛围方向，如 <span class="mono" data-page-node-id="zZsfbziWTvObYRhrmqaBVX">「低沉环境音」</span>。</td></tr>
+      <tr data-page-node-id="jrlNPPRO4XIPnWNlMwpm2x"><td data-page-node-id="fQivhXFWVaS8yUMn2rBij4">自动批准人工关口</td><td data-page-node-id="zhjuiTlaiSHJIwQSbsHSxx"><b data-page-node-id="FG6ArsSFojuuyHE3EDPFL5">默认勾选。</b>演示模式下自动放行编剧关口，让全流程一次跑通。取消则会停在「② 剧本」等人工确认。</td></tr>
+      <tr data-page-node-id="HHE0N8CYbPjTh6kM1h54qD"><td data-page-node-id="nuV9JaUCYoKaAobFbZIds6">离线模式</td><td data-page-node-id="CMeXIeRi2OmnnF12BT6TCM">默认不勾。勾了就不调 AI，只看管线形状（排障用）。</td></tr>
+    </table>
+  </section>
+
+  <!-- 4 看懂结果 -->
+  <section data-page-node-id="k547if2FPOl09EjGqlizZh">
+    <div class="sec-h" data-page-node-id="YjIsvxBWPJwwC5Wt7lF6Um"><div class="sec-num blue" data-page-node-id="WrM9zzP6dYn2SQQRMSjCnc">4</div><h2 data-page-node-id="JEGa9GOrDRSwPompRBD6JQ">看懂生成结果（重要）</h2></div>
+    <p class="lead" data-page-node-id="1dY2ONCTbDN4CMjOvQFO2t">最后这一步有两种可能，LOOM 都会诚实标注——绝不悄悄用旧视频冒充实时生成：</p>
+    <div class="two" data-page-node-id="oGKFtgqbxwEbge9qFyHQEu">
+      <div class="livenote good" data-page-node-id="QzKtCbzgbsGQPeI2P7HZkb">
+        <h4 data-page-node-id="y5EFpdZhKNQ0MJ8UdSFdPP"><span class="chip real" data-page-node-id="jOPvaCKvdeMM8pQeoTNHfy">实时真生成</span>本机 DGX Spark 在跑</h4>
+        <p data-page-node-id="M8Y7hYpTMtKWe0BO85RSaj">状态栏显示「已连通 cuda…」。这是把提示词送去你本地 Spark 上的 MiniMax-H3 真跑。单个镜头要 6–12 分钟，所以<b data-page-node-id="nyLNdRcHlEWoagyNFdhCGa">不会干等你</b>——提交后立刻返回一个「任务 ID」，参考预览先放着，稍后用「查询生成任务」区把 ID 粘进去取回成片。</p>
+      </div>
+      <div class="livenote fallback" data-page-node-id="iws6UN6IGdBfBuXDI6sTCP">
+        <h4 data-page-node-id="mBuicJkvsJgBujqxKx2mZZ"><span class="chip replay" data-page-node-id="YxZ5QJwYGFocuFWoZWhVXF">预生成回放</span>隧道暂不可达</h4>
+        <p data-page-node-id="4PHhHPOsAtfmXa0nngkG8h">状态栏会明确写「<b data-page-node-id="zHjR5QOXv4GwVsCtpo9guf">本次为预生成回放</b>」。当你的 Spark 没开机 / 隧道断开时，LOOM 播放之前真实生成好的几个镜头让你先看效果，但会清清楚楚告诉你这不是本次生成的。开机后自动切回实时。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 后台两个面板 -->
+  <section data-page-node-id="v6AABwIraQDTM1Lcwr9tyY">
+    <div class="sec-h" data-page-node-id="CKPbcs4coF6p9lC4nFTbeK"><div class="sec-num violet" data-page-node-id="1EnncPpBeQYiQEG4WzyJhV">5</div><h2 data-page-node-id="3TPHHGrxsftY9UNm8Mw7Rt">页面下方两个折叠面板</h2></div>
+    <h3 data-page-node-id="lt32NJpyCg1NvtLZyjOxGS">「隧道状态」</h3>
+    <p class="lead" data-page-node-id="DunSiROavIQZymyyFyEwGC">展示创空间能不能连上你本地的 DGX Spark（回源链路）。显示「已连通」就说明真生成后端在线；显示「地址失效 / 不可达」就是 Spark 那边没起来或隧道断了。按「重新解析隧道地址」可让它重新探一次。</p>
+    <h3 data-page-node-id="PCGVw4lDVkc5fb3rMAPR3p">「查询生成任务」</h3>
+    <p class="lead" data-page-node-id="i1fllmFIZ3oM4OaQxAblAt">真生成是异步的，一个镜头要好几分钟。把刚才提交后拿到的「任务 ID」粘进来点「查询」，就能看进度；生成好了它会帮你把成片取回并播放。</p>
+    <div class="tip" data-page-node-id="w5IG0YBP5ioNmFSoSEyHzw"><div data-page-node-id="ganIDLORv6lDH9eEnQ7SSY">💡</div><div data-page-node-id="DUKdseOYKLwiqs6HCGi7KP">一个镜头 6–12 分钟是正常的——MiniMax-H3 在本地 GPU 上逐帧渲染。趁这个时间你可以继续生成下一个镜头。</div></div>
+  </section>
+
+  <!-- 6 常见问题 -->
+  <section data-page-node-id="uFcL7Nb7pysagxpFM6758G">
+    <div class="sec-h" data-page-node-id="rireoM7IgRCinDoeJS7VkD"><div class="sec-num teal" data-page-node-id="6DIiJBpjHdWGzZt0h4eb9i">6</div><h2 data-page-node-id="8IdyDBDAQv95lCmtcXdcfk">常见问题（快速排查）</h2></div>
+    <table data-page-node-id="99sUi95ozWTYiHhqv0abhM">
+      <tr data-page-node-id="6F77Ac6BYrD4IrRn1kYRwI"><th style="width:36%" data-page-node-id="b6rsC4hbGwxkXehb17ypuN">现象</th><th data-page-node-id="p3QIr3gLN2CAyR0Ac4n3XO">原因 & 怎么办</th></tr>
+      <tr data-page-node-id="VIzVFWIwWz1IJeHRvtK3LO"><td data-page-node-id="FHhGqVffx3W1pvpWocCXtR">生成停在「② 编剧」不动</td><td data-page-node-id="VGuwAJFhWJJdcqpn7RnfCG">检查是否取消了「自动批准人工关口」——取消后需在剧本确认后手动放行。</td></tr>
+      <tr data-page-node-id="GIcuBFGy95hTYxVj7h2Qri"><td data-page-node-id="Ia72MUJzoEaFbeoQA2sP1n">显示「本次为预生成回放」</td><td data-page-node-id="e1o3aSS6kzXtQxWcGOT6rQ">Spark 没开机或隧道断了。把本机 Spark 打开（crontab 会自动拉起链路），点「重新解析隧道地址」。</td></tr>
+      <tr data-page-node-id="fBiYRewKCM59hrlQdXv2l6"><td data-page-node-id="pPVR0xgnTAzp8GOq4QmHQe">点开始没反应 / 停在等待</td><td data-page-node-id="2YPRhG8UPZF4XtZfH8cmu2">创空间容器可能在休眠（长时间没人访问会睡）。刷新页面唤醒，等它自动重启再点。</td></tr>
+      <tr data-page-node-id="hXSdeuuwfsOHQTmFpgNEv7"><td data-page-node-id="ppk7CJaZ91aWA7JqkN3plZ">查询任务显示「已排队」很久</td><td data-page-node-id="uD6axTGhssEgpF0PAfsXEx">GPU 在上一个任务。等一下再查，会轮到你。</td></tr>
+      <tr data-page-node-id="ZWFymEc3KJ9JR3eEe0IIkO"><td data-page-node-id="B96F4EDQGdIIfMwCJGhtqM">容器重启后任务 ID 查不到</td><td data-page-node-id="9P7CyVWAVAgB0ZsL7fhnlm">任务记录存在容器内存，重启会清空。重新提交一次即可。</td></tr>
+    </table>
+  </section>
+
+  <!-- 7 一点提醒 -->
+  <section data-page-node-id="7BINPch7LHufDJUD97M9T3">
+    <div class="sec-h" data-page-node-id="U2nXsbCw36JrZx6EyaNOFi"><div class="sec-num amber" data-page-node-id="2IRXCbb6EOIGN0nrCh4X56">7</div><h2 data-page-node-id="UQapqH6JC6jiDw3ptn386g">几个要记住的事</h2></div>
+    <ul data-page-node-id="AUjVuWR6MXuXTJjmfen5ai">
+      <li data-page-node-id="h49osw0N91NMfWlramcgCu"><b data-page-node-id="2Tn6OYFZTEPh1cSRcKYDsA">logline 决定上限。</b>一句话越具体，后面剧本和镜头越像那么回事。</li>
+      <li data-page-node-id="he6V4UV4PbSGEiTzMXmbEx"><b data-page-node-id="sxS6cgiQz8GC10ULBVfeE3">镜头数是 6–8 个</b>，这是有意的——每个都要送真生成，太多整条线跑不完。</li>
+      <li data-page-node-id="n2kryEObYCdxmkqFXk5i9p"><b data-page-node-id="9W7i2RgLJstaBoIHWfNNA3">「自动批准」勾上</b>是看全流程最省事的方式；想体验人工关口就取消。</li>
+      <li data-page-node-id="iQEaKsDWzHa7yXlk6EME8e"><b data-page-node-id="RHinddiVfNZiPUjFIN4nDZ">别被「回放」吓到</b>——它是诚实标注的演示机制，Spark 一开机就切回实时真生成。</li>
+    </ul>
+  </section>
+
+  <div class="footer" data-page-node-id="Hnk09kHVEMPw41jzQy8cOp">LOOM · Logline-Oriented Orchestration Machine —— 7 个 Agent 只通过版本化 JSON 契约交接<br data-page-node-id="ZL6xHJGZb2wz8LA1yiw6Qz">代码与契约见 github.com/Ink-SHEN/logline-loom</div>
+</div>
+</body>
+</html>
