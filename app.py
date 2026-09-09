@@ -14,7 +14,7 @@ import random
 
 import gradio as gr
 
-from space import config, generate, pipeline, prompts, tunnel, validate
+from space import config, generate, pipeline, prompts, theme, tunnel, validate
 
 TITLE = "LOOM · 一句话生成 AI 短片的电影 Agent"
 INTRO = """
@@ -103,19 +103,43 @@ def _fmt(doc):
     return json.dumps(doc, ensure_ascii=False, indent=2)
 
 
+def _st(done=0, running=None, blocked=None):
+    """构造七站进度状态列表。
+
+    前 done 站标 done；running / blocked 用站序号（1–7）指定；
+    ⑥质检 ⑦剪辑 恒为 local——它们跑在本地节点上，创空间里永远不点亮。
+    """
+    s = ["pending"] * 7
+    for i in range(min(done, 5)):
+        s[i] = "done"
+    if running:
+        s[running - 1] = "running"
+    if blocked:
+        s[blocked - 1] = "blocked"
+    s[5] = "local"
+    s[6] = "local"
+    return s
+
+
 def run_pipeline(logline, duration, aspect, visual_style, audio_style, requested_shots, auto_gate, offline):
-    """主流程。逐段 yield，界面上能看到 Agent 一个个往下走。"""
+    """主流程。逐段 yield，界面上能看到 Agent 一个个往下走。
+
+    输出共 7 个：[status, c01, c02, c03, c04, gallery, progress]。
+    第 7 个（七站进度条）是后加的，刻意**追加在末尾**——这样前 6 个的索引不变，
+    外部按位置取值的调用方（含线上验证脚本 /gradio_api/call/run_pipeline）不受影响。
+    所有 yield 一律走 emit()，避免漏改某一个导致解包报错。
+    """
+    def emit(text, states, brief=None, screenplay=None, shotlist=None, genreq=None, gallery=None):
+        return (text, brief, screenplay, shotlist, genreq, gallery, theme.progress_html(states))
+
     if not logline or len(logline.strip()) < 20:
-        yield "**请至少输入 20 个字的一句话故事**（契约 c01_brief 对 logline 的硬性要求）。", None, None, None, None, None
+        yield emit("**请至少输入 20 个字的一句话故事**（契约 c01_brief 对 logline 的硬性要求）。", _st())
         return
     if len(logline.strip()) > 400:
-        yield "**logline 超过 400 字**，契约 c01_brief 上限是 400。", None, None, None, None, None
+        yield emit("**logline 超过 400 字**，契约 c01_brief 上限是 400。", _st())
         return
 
     logs = []
-
-    def emit(status):
-        return "\n\n".join(logs) + "\n\n" + status,
 
     # ① 片约
     reqs = []
@@ -126,11 +150,11 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, requested
                                  requested_shots=reqs)
     ok, problems = validate.validate("c01_brief", brief, check_gates=True)
     logs.append("**① 片约 c01_brief**：%s" % ("通过契约校验" if ok else "不通过：%s" % "; ".join(problems[:3])))
-    yield "\n\n".join(logs), brief, None, None, None, None
+    yield emit("\n\n".join(logs), _st(done=1), brief=brief)
 
     # ② 编剧
     logs.append("**② 编剧 Agent**：正在生成剧本…")
-    yield "\n\n".join(logs), brief, None, None, None, None
+    yield emit("\n\n".join(logs), _st(done=1, running=2), brief=brief)
     screenplay, note, degraded = pipeline.call_agent(
         "screenwriter", brief,
         "片约（c01_brief，artifact_id=%s）：\n%s\n\n"
@@ -146,15 +170,17 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, requested
         gate_note = "> ⚠️ 剧本关口已由界面【自动批准】。默认 `gate.status` 是 `pending`，未批准时下游必须阻塞。"
     else:
         gate_note = "> ⛔ 剧本关口保持 `pending`，下游已阻塞。勾选「自动批准」后重跑才能继续。"
-    yield "\n\n".join(logs) + "\n\n" + gate_note, brief, screenplay, None, None, None
+    yield emit("\n\n".join(logs) + "\n\n" + gate_note,
+               _st(done=2) if auto_gate else _st(done=1, blocked=2),
+               brief=brief, screenplay=screenplay)
     if not auto_gate:
         logs.append("**流程在人工关口处停止**（这是设计意图，见 `agents/README.md` 第六节）。")
-        yield "\n\n".join(logs), brief, screenplay, None, None, None
+        yield emit("\n\n".join(logs), _st(done=1, blocked=2), brief=brief, screenplay=screenplay)
         return
 
     # ③ 分镜
     logs.append("**③ 分镜 Agent**：正在拆镜头…")
-    yield "\n\n".join(logs), brief, screenplay, None, None, None
+    yield emit("\n\n".join(logs), _st(done=2, running=3), brief=brief, screenplay=screenplay)
     shotlist, note, _ = pipeline.call_agent(
         "storyboard", screenplay,
         "剧本（c02_screenplay，artifact_id=%s，剧本确认关口已批准）：\n%s\n\n"
@@ -163,20 +189,20 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, requested
         % (screenplay["envelope"]["artifact_id"], json.dumps(screenplay["payload"], ensure_ascii=False, indent=2), aspect),
         offline=offline)
     logs[-1] = "**③ 分镜 Agent**：%s" % note
-    yield "\n\n".join(logs), brief, screenplay, shotlist, None, None
+    yield emit("\n\n".join(logs), _st(done=3), brief=brief, screenplay=screenplay, shotlist=shotlist)
 
     # ④ 提示词：为分镜表里每个镜头各生成一份 c04（整片生成计划）
     logs.append("**④ 提示词 Agent**：正在为每个镜头写英文提示词…（%d 个镜头逐个生成）"
                 % len(((shotlist.get("payload") or {}).get("shots")) or []))
-    yield "\n\n".join(logs), brief, screenplay, shotlist, None, None
+    yield emit("\n\n".join(logs), _st(done=3, running=4), brief=brief, screenplay=screenplay, shotlist=shotlist)
     gen_items, gen_note, gen_degraded = pipeline.build_all_gen_requests(shotlist, offline=offline)
     genreq_first = gen_items[0]["c04"] if gen_items else None
     logs[-1] = "**④ 提示词 Agent**：%s" % gen_note
-    yield "\n\n".join(logs), brief, screenplay, shotlist, genreq_first, None
+    yield emit("\n\n".join(logs), _st(done=4), brief=brief, screenplay=screenplay, shotlist=shotlist, genreq=genreq_first)
 
     # ⑤ 生成：隧道可达 → 首镜即时真生成 + 其余整片下发 Spark 调度器；不可达 → 回放
     logs.append("**⑤ 生成 Agent**：正在探测 Spark 上的 ComfyUI…")
-    yield "\n\n".join(logs), brief, screenplay, shotlist, genreq_first, None
+    yield emit("\n\n".join(logs), _st(done=4, running=5), brief=brief, screenplay=screenplay, shotlist=shotlist, genreq=genreq_first)
 
     reachable, detail = generate.probe_live()
     preview = generate.replay_shots()
@@ -185,7 +211,8 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, requested
     if not reachable:
         logs[-1] = ("**⑤ 生成 Agent**：⚠️ **本次为预生成回放**，不是实时生成。\n\n"
                     "- 原因：%s\n- 探针：%s" % (generate.replay_note() or "隧道不可达", detail))
-        yield "\n\n".join(logs), brief, screenplay, shotlist, genreq_first, gallery
+        yield emit("\n\n".join(logs), _st(done=5), brief=brief, screenplay=screenplay,
+                   shotlist=shotlist, genreq=genreq_first, gallery=gallery)
         return
 
     batch_note = ""
@@ -231,7 +258,8 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, requested
         first_task = "⚠️ 离线模式（未真正调 LLM / 生成），仅展示管线形状与回放预览" if offline else "（无镜头）"
 
     logs[-1] = "**⑤ 生成 Agent**：%s%s\n\n- 探针：%s" % (first_task, batch_note, detail)
-    yield "\n\n".join(logs), brief, screenplay, shotlist, genreq_first, gallery
+    yield emit("\n\n".join(logs), _st(done=5), brief=brief, screenplay=screenplay,
+               shotlist=shotlist, genreq=genreq_first, gallery=gallery)
 
 
 def query_batch_progress(film_id):
@@ -288,7 +316,6 @@ def build_ui():
     with gr.Blocks(title=TITLE) as demo:
         gr.Markdown("# " + TITLE)
         gr.Markdown(INTRO)
-        gr.Markdown(self_check())
 
         with gr.Row():
             with gr.Column(scale=3):
@@ -319,9 +346,13 @@ def build_ui():
                 run_btn = gr.Button("开始生成", variant="primary")
 
             with gr.Column(scale=4):
-                status = gr.Markdown("等待输入…")
+                # 七站进度条。它显示在 status 上方，但在 outputs 里排在**末尾**——
+                # 组件位置与数据流顺序解耦，这样前 6 个输出的索引不受影响。
+                # 这一列同时是任务 ID / film_id 的展示区，所以进度条只加在顶部，不动配比。
+                progress = gr.HTML(theme.progress_html(), padding=False)
+                status = gr.Markdown("等待输入…", elem_classes=["loom-status"])
 
-        with gr.Tabs():
+        with gr.Tabs(elem_classes=["loom-tabs"]):
             with gr.Tab("① 片约 c01"):
                 c01 = gr.JSON(label="c01_brief")
             with gr.Tab("② 剧本 c02"):
@@ -336,7 +367,13 @@ def build_ui():
         run_btn.click(run_pipeline,
                       inputs=[logline, duration, aspect, visual_style, audio_style,
                               requested_shots, auto_gate, offline],
-                      outputs=[status, c01, c02, c03, c04, gallery])
+                      outputs=[status, c01, c02, c03, c04, gallery, progress])
+
+        # 自检是运维信息（LLM 配置 / 隧道连通 / 回放素材数），放在契约产物之后：
+        # 它不该占首屏——评审一进来先看到「未配置」「未连通」会直接扣分。
+        # 折叠且默认关闭，想确认系统状态的人自然会找到它。
+        with gr.Accordion("运行状态自检", open=False):
+            gr.Markdown(self_check())
 
         with gr.Accordion("隧道状态（创空间 ↔ DGX Spark 回源链路）", open=False):
             gr.Markdown(
@@ -409,4 +446,7 @@ def build_ui():
 
 if __name__ == "__main__":
     demo = build_ui()
-    demo.launch(server_name="0.0.0.0", server_port=7860)
+    # Gradio 6 关键：theme / css 是**应用级**参数，必须传给 launch()。
+    # 写成 gr.Blocks(theme=..., css=...) 不会报错，只发一条 UserWarning，样式被静默忽略。
+    demo.launch(server_name="0.0.0.0", server_port=7860,
+                theme=theme.build_theme(), css=theme.CUSTOM_CSS)

@@ -1,3 +1,6 @@
-gradio>=4.44.0
+# 锁下限与上限：创空间实际跑的是 6.17.3。
+# 不锁上限的话平台重建可能装到 6.22/7.x，自定义主题变量与 CSS 类名会失效。
+# 注意：Gradio 6 把 theme/css/js/head 从 Blocks() 移到了 launch()，跨大版本改动前先看迁移指南。
+gradio>=6.17.3,<7
 jsonschema>=4.20.0
 requests>=2.31.0
