@@ -33,7 +33,8 @@ VISION_PROMPT = """你是一名成片质检员，任务是对一个 AI 生成的
   no_red_line_violation（画面是否命中红线条款；未提供红线段落则判 pass 并注明"未提供红线，默认无违规"）
 判定原则：只有看到确凿问题才判 fail 并写清具体时刻/位置；正常情况下各主观项应多为 pass。
 请严格输出一个 JSON 对象（不要任何解释），形如：
-{"findings":[{"name":"...","status":"pass|fail","detail":"具体到哪一秒、画面哪个位置..."}, ...5项全列},"root_cause":"若有fail写根因否则null","score":0到10的整数}
+{"findings":[{"name":"...","status":"pass|fail","detail":"具体到哪一秒、画面哪个位置..."}, ...5项全列},"root_cause":"若有fail写根因否则null","score":0到10的整数,
+"rewrite_suggestion":"仅当 prompt_adherence 或 scene_consistency 判 fail 时必须给：一段可直接替换进英文提示词的改写(用英文，指出画面差在哪、该怎么改，让重跑能贴近期望；若画面偏差是内容无关的崩坏则给null)"}
 判 fail 必须在 detail 里写清具体位置/时刻（至少8个字符）。"""
 
 
@@ -195,7 +196,10 @@ def vision_judge(video_path, target_text, brief_text="",
     except Exception:
         score = None
     root = data.get("root_cause") if isinstance(data.get("root_cause"), str) else None
+    rs = data.get("rewrite_suggestion")
+    rewrite_suggestion = rs if isinstance(rs, str) and rs.strip() else None
     return {"ok": True, "findings": clean, "score": score, "root_cause": root,
+            "rewrite_suggestion": rewrite_suggestion,
             "frames_t": [f["at_seconds"] for f in frames]}
 
 

@@ -271,10 +271,20 @@ def build_c06(shot_id, probe, targets, vision=None, vision_target_note=""):
                      "rationale": "客观项失败（%s）。批量模式下客观问题不自动重试，留人工核对 ffprobe 与提示词"
                      % "、".join(obj_fails)}
     elif sub_fails:
-        verdict, route_to = "fail", "retry"
-        suggested = {"action": "new_seed", "patch": {},
-                     "rationale": "画面主观项失败（%s）——该候选 seed 生成画面不达标，换种子/换候选重试"
-                     % "、".join(sub_fails)}
+        # 画面主观 fail：可换 seed 或按视觉给的改写建议改提示词再重试
+        rew = (vision or {}).get("rewrite_suggestion") if isinstance(vision, dict) else None
+        has_rewrite = isinstance(rew, str) and rew.strip()
+        if has_rewrite and {"prompt_adherence", "scene_consistency"} & set(sub_fails):
+            verdict, route_to = "fail", "retry"
+            suggested = {"action": "rewrite_prompt",
+                         "patch": {"prompt": rew.strip()},
+                         "rationale": "画面主观项失败（%s），视觉模型给出提示词改写建议，重试时应用改写而非仅换 seed"
+                         % "、".join(sub_fails)}
+        else:
+            verdict, route_to = "fail", "retry"
+            suggested = {"action": "new_seed", "patch": {},
+                         "rationale": "画面主观项失败（%s）——该候选 seed 生成画面不达标，换种子/换候选重试"
+                         % "、".join(sub_fails)}
         if not has_vision:
             route_to, verdict = "human", "fail"
             suggested = {"action": "manual_intervention", "patch": {},
