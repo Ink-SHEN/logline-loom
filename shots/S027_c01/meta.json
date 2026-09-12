@@ -1,0 +1,68 @@
+{
+  "envelope": {
+    "schema_version": "1.0",
+    "artifact_id": "genres.S027_c01",
+    "contract": "c05_gen_result",
+    "created_at": "2026-09-10T06:59:52.167Z",
+    "producer": {
+      "kind": "agent",
+      "name": "generation_agent",
+      "agent_version": "0.1.0"
+    },
+    "upstream_refs": [
+      "genreq.S027_c01"
+    ],
+    "notes": "--from-history 补落盘（prompt_id 来自已有运行）；实际提交的工作流图：../剧本/genplan_i2v/S027_c01.graph.json"
+  },
+  "payload": {
+    "shot_id": "S027",
+    "candidate_id": "S027_c01",
+    "comfy_prompt_id": "1d5938b3-6c46-4e21-bedc-69735aa770ea",
+    "output": {
+      "path": "shots/S027_c01/video.mp4",
+      "sha256": "cfdc0b86e7ffff5219e354c2352d160bc4d07bf126bbf8d0d61ef09c926969ed",
+      "size_bytes": 9019695
+    },
+    "ffprobe": {
+      "duration_seconds": 11.542,
+      "video_stream": {
+        "codec_name": "h264",
+        "width": 1984,
+        "height": 1120,
+        "avg_frame_rate": "24/1"
+      },
+      "audio_stream": {
+        "codec_name": "aac",
+        "sample_rate": "32000",
+        "channels": 2
+      }
+    },
+    "timing": {
+      "submitted_at": "2026-09-10T10:40:31+08:00",
+      "finished_at": "2026-09-10T14:14:27+08:00",
+      "elapsed_seconds": 12836
+    },
+    "params_snapshot": {
+      "prompt": "<Picture 1> is the provided first frame; animate from it without altering its composition. [202s-213s] The camera cranes slowly upward and eases back, revealing more of the megastructure. Do NOT change the architecture from the reference frame — only animate: clinic pods glide along their elevated tracks, balcony lights and the thousands of green and amber wristband lights shimmer and drift, pigeons cross the frame, dusk deepens slightly. Sound: the score reaches its peak over a deep city-dusk ambience, then everything fades out together.",
+      "seed": 62027,
+      "duration_seconds": 11,
+      "megapixels": 2.1,
+      "steps": 8,
+      "turbo_enabled": true,
+      "filename_prefix": "shots/S027_c01",
+      "width": 1984,
+      "height": 1120,
+      "frame_count_actual": 277
+    },
+    "model_files": {
+      "unet_name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default",
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "clip_type": "minimax",
+      "video_vae_name": "minimax_h3_video_vae_fp16.safetensors",
+      "audio_vae_name": "minimax_h3_audio_vae_fp32.safetensors",
+      "lora_name": "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors"
+    },
+    "submitted_by": "Ink-SHEN"
+  }
+}

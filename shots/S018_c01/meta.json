@@ -1,0 +1,68 @@
+{
+  "envelope": {
+    "schema_version": "1.0",
+    "artifact_id": "genres.S018_c01",
+    "contract": "c05_gen_result",
+    "created_at": "2026-09-10T12:16:39.369Z",
+    "producer": {
+      "kind": "agent",
+      "name": "generation_agent",
+      "agent_version": "0.1.0"
+    },
+    "upstream_refs": [
+      "genreq.S018_c01"
+    ],
+    "notes": "--from-history 补落盘（prompt_id 来自已有运行）；实际提交的工作流图：../剧本/genplan_r2v/S018_c01.graph.json"
+  },
+  "payload": {
+    "shot_id": "S018",
+    "candidate_id": "S018_c01",
+    "comfy_prompt_id": "b4af88a0-121f-4843-be37-53c2eb6b60c0",
+    "output": {
+      "path": "shots/S018_c01/video.mp4",
+      "sha256": "93add19f969612c1e91dfc0e5a94a341f555a8bc438f23f5d03383c7f3906c1b",
+      "size_bytes": 2971642
+    },
+    "ffprobe": {
+      "duration_seconds": 8,
+      "video_stream": {
+        "codec_name": "h264",
+        "width": 1280,
+        "height": 736,
+        "avg_frame_rate": "24/1"
+      },
+      "audio_stream": {
+        "codec_name": "aac",
+        "sample_rate": "32000",
+        "channels": 2
+      }
+    },
+    "timing": {
+      "submitted_at": "2026-09-10T20:08:02+08:00",
+      "finished_at": "2026-09-10T20:16:05+08:00",
+      "elapsed_seconds": 482.9
+    },
+    "params_snapshot": {
+      "prompt": "<Picture 1> defines the protagonist and costume. <Picture 2> duplicates <Picture 1> for the second reference slot.  Medium shot, tracking. Lao Zhou stands up and requests permission to go downstairs; he pulls a labeled blister pack of pills from his left jacket pocket and frowns. Butler (Mandarin): \"批准。戴上手环。药在您左边口袋，已经分装好了。\" Style lock: modern, clean, well-maintained; no worn or vintage textures.",
+      "seed": 61018,
+      "duration_seconds": 8,
+      "megapixels": 0.9,
+      "steps": 4,
+      "turbo_enabled": true,
+      "filename_prefix": "shots/S018_c01",
+      "width": 1280,
+      "height": 736,
+      "frame_count_actual": 192
+    },
+    "model_files": {
+      "unet_name": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default",
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "clip_type": "minimax",
+      "video_vae_name": "minimax_h3_video_vae_fp16.safetensors",
+      "audio_vae_name": "minimax_h3_audio_vae_fp32.safetensors",
+      "lora_name": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors"
+    },
+    "submitted_by": "Ink-SHEN"
+  }
+}

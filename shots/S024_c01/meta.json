@@ -1,0 +1,68 @@
+{
+  "envelope": {
+    "schema_version": "1.0",
+    "artifact_id": "genres.S024_c01",
+    "contract": "c05_gen_result",
+    "created_at": "2026-09-10T12:35:02.355Z",
+    "producer": {
+      "kind": "agent",
+      "name": "generation_agent",
+      "agent_version": "0.1.0"
+    },
+    "upstream_refs": [
+      "genreq.S024_c01"
+    ],
+    "notes": "--from-history 补落盘（prompt_id 来自已有运行）；实际提交的工作流图：../剧本/genplan_i2v/S024_c01.graph.json"
+  },
+  "payload": {
+    "shot_id": "S024",
+    "candidate_id": "S024_c01",
+    "comfy_prompt_id": "2d2a63f2-2c81-4b06-ba9a-fddcba0c308b",
+    "output": {
+      "path": "shots/S024_c01/video.mp4",
+      "sha256": "0edbae2c32e83af618a6e18188a6ce4c5539d8c2fc2841fbbfcd716f48a6885c",
+      "size_bytes": 1216194
+    },
+    "ffprobe": {
+      "duration_seconds": 6.583,
+      "video_stream": {
+        "codec_name": "h264",
+        "width": 1280,
+        "height": 736,
+        "avg_frame_rate": "24/1"
+      },
+      "audio_stream": {
+        "codec_name": "aac",
+        "sample_rate": "32000",
+        "channels": 2
+      }
+    },
+    "timing": {
+      "submitted_at": "2026-09-10T20:23:13+08:00",
+      "finished_at": "2026-09-10T20:33:18+08:00",
+      "elapsed_seconds": 604.3
+    },
+    "params_snapshot": {
+      "prompt": "<Picture 1> is the provided first frame; animate from it without altering its composition. [182s-188s] The wristband screen switches from a plain dial to a line of glowing text: 「心率正常。初一快乐。」 Camera locked on the wrist; only the screen content changes. Sound: one soft notification chime.",
+      "seed": 62024,
+      "duration_seconds": 6,
+      "megapixels": 0.9,
+      "steps": 8,
+      "turbo_enabled": true,
+      "filename_prefix": "shots/S024_c01",
+      "width": 1280,
+      "height": 736,
+      "frame_count_actual": 158
+    },
+    "model_files": {
+      "unet_name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default",
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "clip_type": "minimax",
+      "video_vae_name": "minimax_h3_video_vae_fp16.safetensors",
+      "audio_vae_name": "minimax_h3_audio_vae_fp32.safetensors",
+      "lora_name": "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors"
+    },
+    "submitted_by": "Ink-SHEN"
+  }
+}

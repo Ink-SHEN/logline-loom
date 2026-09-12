@@ -1,0 +1,68 @@
+{
+  "envelope": {
+    "schema_version": "1.0",
+    "artifact_id": "genres.S026_c01",
+    "contract": "c05_gen_result",
+    "created_at": "2026-09-09T11:04:23.826Z",
+    "producer": {
+      "kind": "agent",
+      "name": "generation_agent",
+      "agent_version": "0.1.0"
+    },
+    "upstream_refs": [
+      "genreq.S026_c01"
+    ],
+    "notes": "--from-history 补落盘（prompt_id 来自已有运行）；实际提交的工作流图：../剧本/genplan_t2v/S026_c01.graph.json"
+  },
+  "payload": {
+    "shot_id": "S026",
+    "candidate_id": "S026_c01",
+    "comfy_prompt_id": "46ef9b06-0e9e-4e66-b831-47c2d65cd966",
+    "output": {
+      "path": "shots/S026_c01/video.mp4",
+      "sha256": "6b9d80617c3297b17ae1dbff3d92e033d961d8c157c8d4a666be1a5e9bc264a8",
+      "size_bytes": 7574318
+    },
+    "ffprobe": {
+      "duration_seconds": 8,
+      "video_stream": {
+        "codec_name": "h264",
+        "width": 1984,
+        "height": 1120,
+        "avg_frame_rate": "24/1"
+      },
+      "audio_stream": {
+        "codec_name": "aac",
+        "sample_rate": "32000",
+        "channels": 2
+      }
+    },
+    "timing": {
+      "submitted_at": "2026-09-09T17:09:52+08:00",
+      "finished_at": "2026-09-09T19:02:43+08:00",
+      "elapsed_seconds": 6771.2
+    },
+    "params_snapshot": {
+      "prompt": "[194s-202s] Starting on an extreme close-up of the unlit cigarette behind the old man's ear, the camera rises vertically; Lao Zhou and the chess table shrink below into a modern residential plaza at dusk — glass canopies, clean LED-lit walkways, manicured greenery. A flock of pigeons bursts upward past the lens. Sound: wing beats, the plaza ambience spreading wide, the score swelling in. Style lock: modern contemporary Chinese smart-living aesthetic — clean architectural lines, glass, brushed metal, warm LED lighting; everything new and well-maintained; no worn, dilapidated, cluttered or vintage textures.",
+      "seed": 63026,
+      "duration_seconds": 8,
+      "megapixels": 2.1,
+      "steps": 20,
+      "turbo_enabled": false,
+      "filename_prefix": "shots/S026_c01",
+      "width": 1984,
+      "height": 1120,
+      "frame_count_actual": 192
+    },
+    "model_files": {
+      "unet_name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default",
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "clip_type": "minimax",
+      "video_vae_name": "minimax_h3_video_vae_fp16.safetensors",
+      "audio_vae_name": "minimax_h3_audio_vae_fp32.safetensors",
+      "lora_name": null
+    },
+    "submitted_by": "Ink-SHEN"
+  }
+}

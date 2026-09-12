@@ -1,0 +1,69 @@
+{
+  "envelope": {
+    "schema_version": "1.0",
+    "artifact_id": "genres.S008_c01",
+    "contract": "c05_gen_result",
+    "created_at": "2026-09-10T00:48:30.642Z",
+    "producer": {
+      "kind": "agent",
+      "name": "generation_agent",
+      "agent_version": "0.1.0"
+    },
+    "upstream_refs": [
+      "genreq.S008_c01"
+    ],
+    "notes": "④生成 Agent 自动落盘；实际提交的工作流图：../剧本/genplan_i2v/S008_c01.graph.json"
+  },
+  "payload": {
+    "shot_id": "S008",
+    "candidate_id": "S008_c01",
+    "comfy_prompt_id": "4b82c6d9-b12f-4c7d-b0cd-dd06aa6e9f38",
+    "output": {
+      "path": "shots/S008_c01/video.mp4",
+      "sha256": "cd9e9f85876d75693c18da91f2a3b059dd2c3805317f3541c9c4f96c5b6c70bb",
+      "size_bytes": 886019
+    },
+    "ffprobe": {
+      "duration_seconds": 6.583,
+      "video_stream": {
+        "codec_name": "h264",
+        "width": 1280,
+        "height": 736,
+        "avg_frame_rate": "24/1"
+      },
+      "audio_stream": {
+        "codec_name": "aac",
+        "sample_rate": "32000",
+        "channels": 2
+      }
+    },
+    "timing": {
+      "submitted_at": "2026-09-10T08:38:26+08:00",
+      "finished_at": "2026-09-10T08:48:26+08:00",
+      "elapsed_seconds": 600.4,
+      "queue_position_at_submit": 0
+    },
+    "params_snapshot": {
+      "prompt": "<Picture 1> is the provided first frame; animate from it without altering its composition. [54s-60s] The smart fridge's handle display switches from normal to a glowing red lock icon; the lock engages. Camera locked; only the indicator light changes state. Sound: an electronic lock \"clack\", followed by one low alert tone. Style lock: modern, clean, well-maintained; no worn or vintage textures.",
+      "seed": 62008,
+      "duration_seconds": 6,
+      "megapixels": 0.9,
+      "steps": 8,
+      "turbo_enabled": true,
+      "filename_prefix": "shots/S008_c01",
+      "width": 1280,
+      "height": 736,
+      "frame_count_actual": 158
+    },
+    "model_files": {
+      "unet_name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default",
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "clip_type": "minimax",
+      "video_vae_name": "minimax_h3_video_vae_fp16.safetensors",
+      "audio_vae_name": "minimax_h3_audio_vae_fp32.safetensors",
+      "lora_name": "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors"
+    },
+    "submitted_by": "Ink-SHEN"
+  }
+}

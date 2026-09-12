@@ -1,0 +1,68 @@
+{
+  "envelope": {
+    "schema_version": "1.0",
+    "artifact_id": "genres.S020_c01",
+    "contract": "c05_gen_result",
+    "created_at": "2026-09-10T05:53:45.000Z",
+    "producer": {
+      "kind": "agent",
+      "name": "generation_agent",
+      "agent_version": "0.1.0"
+    },
+    "upstream_refs": [
+      "genreq.S020_c01"
+    ],
+    "notes": "--from-history 补落盘（prompt_id 来自已有运行）；实际提交的工作流图：../剧本/genplan_i2v/S020_c01.graph.json"
+  },
+  "payload": {
+    "shot_id": "S020",
+    "candidate_id": "S020_c01",
+    "comfy_prompt_id": "692bce16-88e2-4192-8570-60c780d40462",
+    "output": {
+      "path": "shots/S020_c01/video.mp4",
+      "sha256": "df211f77016ab003773ee7f198b861f0ca4c29e40d0e765d3d5faaa2b532e699",
+      "size_bytes": 3768479
+    },
+    "ffprobe": {
+      "duration_seconds": 9.417,
+      "video_stream": {
+        "codec_name": "h264",
+        "width": 1984,
+        "height": 1120,
+        "avg_frame_rate": "24/1"
+      },
+      "audio_stream": {
+        "codec_name": "aac",
+        "sample_rate": "32000",
+        "channels": 2
+      }
+    },
+    "timing": {
+      "submitted_at": "2026-09-10T09:25:06+08:00",
+      "finished_at": "2026-09-10T10:40:31+08:00",
+      "elapsed_seconds": 4524.9
+    },
+    "params_snapshot": {
+      "prompt": "<Picture 1> is the provided first frame; animate from it without altering its composition. [149s-158s] The TV brightens: a photographed handwritten note in shaky Chinese strokes gradually fades in until fully legible; the old man stands before the screen, completely motionless. Only the handwriting appears; the man and the modern living room do not move. Sound: the butler reads \"补充条款，签署人：林慧……\", then stops; a dove whistle passes outside the window. Note text on screen: 「每月初一，让老周吃顿红烧肉，抽一支烟。他胃不好， 一辈子就好这两口。别管太死。——林慧」",
+      "seed": 62020,
+      "duration_seconds": 9,
+      "megapixels": 2.1,
+      "steps": 8,
+      "turbo_enabled": true,
+      "filename_prefix": "shots/S020_c01",
+      "width": 1984,
+      "height": 1120,
+      "frame_count_actual": 226
+    },
+    "model_files": {
+      "unet_name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default",
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "clip_type": "minimax",
+      "video_vae_name": "minimax_h3_video_vae_fp16.safetensors",
+      "audio_vae_name": "minimax_h3_audio_vae_fp32.safetensors",
+      "lora_name": "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors"
+    },
+    "submitted_by": "Ink-SHEN"
+  }
+}

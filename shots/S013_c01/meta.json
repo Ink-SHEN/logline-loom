@@ -1,0 +1,68 @@
+{
+  "envelope": {
+    "schema_version": "1.0",
+    "artifact_id": "genres.S013_c01",
+    "contract": "c05_gen_result",
+    "created_at": "2026-09-10T08:18:04.315Z",
+    "producer": {
+      "kind": "agent",
+      "name": "generation_agent",
+      "agent_version": "0.1.0"
+    },
+    "upstream_refs": [
+      "genreq.S013_c01"
+    ],
+    "notes": "--from-history 补落盘（prompt_id 来自已有运行）；实际提交的工作流图：../剧本/genplan_r2v/S013_c01.graph.json"
+  },
+  "payload": {
+    "shot_id": "S013",
+    "candidate_id": "S013_c01",
+    "comfy_prompt_id": "fd48d58e-f719-4f24-a68d-a117b4087be2",
+    "output": {
+      "path": "shots/S013_c01/video.mp4",
+      "sha256": "321c17e84410e7ce334835f10f5cd3b7aa8e21dd784bceb917617559d7ea3cc5",
+      "size_bytes": 1737442
+    },
+    "ffprobe": {
+      "duration_seconds": 10.125,
+      "video_stream": {
+        "codec_name": "h264",
+        "width": 1280,
+        "height": 736,
+        "avg_frame_rate": "24/1"
+      },
+      "audio_stream": {
+        "codec_name": "aac",
+        "sample_rate": "32000",
+        "channels": 2
+      }
+    },
+    "timing": {
+      "submitted_at": "2026-09-10T16:02:25+08:00",
+      "finished_at": "2026-09-10T16:13:30+08:00",
+      "elapsed_seconds": 664.9
+    },
+    "params_snapshot": {
+      "prompt": "<Picture 1> defines the de-aged Lao Zhou of two years ago: a modern hospital hallway, plastic chair, ECG electrodes on his chest. <Picture 2> duplicates <Picture 1> for the second reference slot.  Screen-within-screen, static with a faint handheld shake. Recorded Lao Zhou speaks to camera, word by word, very slow (Mandarin): \"我是周建国。 今天差点死在卫生间里。第二条命是救护车给的……往后，要是我再犯糊涂，别听我的。听协议的。\" Sound: hospital corridor noise floor inside the recording. Style lock: modern, clean, well-maintained; no worn or vintage textures.",
+      "seed": 61013,
+      "duration_seconds": 10,
+      "megapixels": 0.9,
+      "steps": 4,
+      "turbo_enabled": true,
+      "filename_prefix": "shots/S013_c01",
+      "width": 1280,
+      "height": 736,
+      "frame_count_actual": 243
+    },
+    "model_files": {
+      "unet_name": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default",
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "clip_type": "minimax",
+      "video_vae_name": "minimax_h3_video_vae_fp16.safetensors",
+      "audio_vae_name": "minimax_h3_audio_vae_fp32.safetensors",
+      "lora_name": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors"
+    },
+    "submitted_by": "Ink-SHEN"
+  }
+}

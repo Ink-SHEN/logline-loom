@@ -1,0 +1,68 @@
+{
+  "envelope": {
+    "schema_version": "1.0",
+    "artifact_id": "genres.S019_c01",
+    "contract": "c05_gen_result",
+    "created_at": "2026-09-10T12:25:54.250Z",
+    "producer": {
+      "kind": "agent",
+      "name": "generation_agent",
+      "agent_version": "0.1.0"
+    },
+    "upstream_refs": [
+      "genreq.S019_c01"
+    ],
+    "notes": "--from-history 补落盘（prompt_id 来自已有运行）；实际提交的工作流图：../剧本/genplan_r2v/S019_c01.graph.json"
+  },
+  "payload": {
+    "shot_id": "S019",
+    "candidate_id": "S019_c01",
+    "comfy_prompt_id": "0b53e535-b22e-43dc-bb8e-2ae3adcb5e68",
+    "output": {
+      "path": "shots/S019_c01/video.mp4",
+      "sha256": "f0db03f2c8cf036d9ad118ab6839e469c8a0c9855f5748385f1bc8b02181fad7",
+      "size_bytes": 2758267
+    },
+    "ffprobe": {
+      "duration_seconds": 7.292,
+      "video_stream": {
+        "codec_name": "h264",
+        "width": 1280,
+        "height": 736,
+        "avg_frame_rate": "24/1"
+      },
+      "audio_stream": {
+        "codec_name": "aac",
+        "sample_rate": "32000",
+        "channels": 2
+      }
+    },
+    "timing": {
+      "submitted_at": "2026-09-10T20:16:05+08:00",
+      "finished_at": "2026-09-10T20:23:13+08:00",
+      "elapsed_seconds": 428.2
+    },
+    "params_snapshot": {
+      "prompt": "<Picture 1> defines the props: the half-empty cigarette pack. <Picture 2> duplicates <Picture 1> for the second reference slot.  Close-up, static. His right jacket pocket, a half pack of cigarettes peeking out. Butler (Mandarin): \"右边口袋的那半包烟，我也看见了。初一，您可以抽一支。\" Style lock: modern, clean, well-maintained; no worn or vintage textures.",
+      "seed": 61019,
+      "duration_seconds": 7,
+      "megapixels": 0.9,
+      "steps": 4,
+      "turbo_enabled": true,
+      "filename_prefix": "shots/S019_c01",
+      "width": 1280,
+      "height": 736,
+      "frame_count_actual": 175
+    },
+    "model_files": {
+      "unet_name": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default",
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "clip_type": "minimax",
+      "video_vae_name": "minimax_h3_video_vae_fp16.safetensors",
+      "audio_vae_name": "minimax_h3_audio_vae_fp32.safetensors",
+      "lora_name": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors"
+    },
+    "submitted_by": "Ink-SHEN"
+  }
+}

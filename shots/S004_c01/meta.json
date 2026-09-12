@@ -1,0 +1,68 @@
+{
+  "envelope": {
+    "schema_version": "1.0",
+    "artifact_id": "genres.S004_c01",
+    "contract": "c05_gen_result",
+    "created_at": "2026-09-10T06:59:25.859Z",
+    "producer": {
+      "kind": "agent",
+      "name": "generation_agent",
+      "agent_version": "0.1.0"
+    },
+    "upstream_refs": [
+      "genreq.S004_c01"
+    ],
+    "notes": "--from-history 补落盘（prompt_id 来自已有运行）；实际提交的工作流图：../剧本/genplan_r2v/S004_c01.graph.json"
+  },
+  "payload": {
+    "shot_id": "S004",
+    "candidate_id": "S004_c01",
+    "comfy_prompt_id": "29c2a039-ccf3-47cd-932a-53ee7f63eb33",
+    "output": {
+      "path": "shots/S004_c01/video.mp4",
+      "sha256": "2b717f6b1a01a1ccfa99d4a2936d13dd781c65b1b47dbcc68f99aa01694357e7",
+      "size_bytes": 3291153
+    },
+    "ffprobe": {
+      "duration_seconds": 10.125,
+      "video_stream": {
+        "codec_name": "h264",
+        "width": 1280,
+        "height": 736,
+        "avg_frame_rate": "24/1"
+      },
+      "audio_stream": {
+        "codec_name": "aac",
+        "sample_rate": "32000",
+        "channels": 2
+      }
+    },
+    "timing": {
+      "submitted_at": "2026-09-10T14:21:41+08:00",
+      "finished_at": "2026-09-10T14:32:44+08:00",
+      "elapsed_seconds": 662.9
+    },
+    "params_snapshot": {
+      "prompt": "<Picture 1> defines Lao Zhou's identity and costume. <Picture 2> duplicates <Picture 1> for the second reference slot.  Close shot, slow push-in. Lao Zhou turns off the induction hob while arguing with the unseen speaker. Dialogue (Mandarin) — Butler: \"周工，今天是初一，但您的健康协议第 4 条……\" Lao Zhou: \"带鱼是带鱼，红烧肉是红烧肉。这也能算一类？\" The wok noise dies down under the dialogue. Style lock: modern, clean, well-maintained; no worn or vintage textures.",
+      "seed": 61004,
+      "duration_seconds": 10,
+      "megapixels": 0.9,
+      "steps": 4,
+      "turbo_enabled": true,
+      "filename_prefix": "shots/S004_c01",
+      "width": 1280,
+      "height": 736,
+      "frame_count_actual": 243
+    },
+    "model_files": {
+      "unet_name": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default",
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "clip_type": "minimax",
+      "video_vae_name": "minimax_h3_video_vae_fp16.safetensors",
+      "audio_vae_name": "minimax_h3_audio_vae_fp32.safetensors",
+      "lora_name": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors"
+    },
+    "submitted_by": "Ink-SHEN"
+  }
+}

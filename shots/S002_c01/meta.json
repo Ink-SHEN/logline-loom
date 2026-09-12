@@ -1,0 +1,68 @@
+{
+  "envelope": {
+    "schema_version": "1.0",
+    "artifact_id": "genres.S002_c01",
+    "contract": "c05_gen_result",
+    "created_at": "2026-09-10T06:59:11.925Z",
+    "producer": {
+      "kind": "agent",
+      "name": "generation_agent",
+      "agent_version": "0.1.0"
+    },
+    "upstream_refs": [
+      "genreq.S002_c01"
+    ],
+    "notes": "--from-history 补落盘（prompt_id 来自已有运行）；实际提交的工作流图：../剧本/genplan_r2v/S002_c01.graph.json"
+  },
+  "payload": {
+    "shot_id": "S002",
+    "candidate_id": "S002_c01",
+    "comfy_prompt_id": "b8d4286e-3603-470d-925a-66c04d8ae103",
+    "output": {
+      "path": "shots/S002_c01/video.mp4",
+      "sha256": "5d0a2d109f1c52146ed1370c64900025433b2646ca15a765e796e2fe30f470d9",
+      "size_bytes": 1548322
+    },
+    "ffprobe": {
+      "duration_seconds": 7.292,
+      "video_stream": {
+        "codec_name": "h264",
+        "width": 1280,
+        "height": 736,
+        "avg_frame_rate": "24/1"
+      },
+      "audio_stream": {
+        "codec_name": "aac",
+        "sample_rate": "32000",
+        "channels": 2
+      }
+    },
+    "timing": {
+      "submitted_at": "2026-09-10T14:14:27+08:00",
+      "finished_at": "2026-09-10T14:21:40+08:00",
+      "elapsed_seconds": 433.5
+    },
+    "params_snapshot": {
+      "prompt": "<Picture 1> defines the protagonist Lao Zhou's identity, apron and his modern smart-home kitchen. <Picture 2> duplicates <Picture 1> for the second reference slot.  Medium shot, static camera. Lao Zhou, 63, pours oil into a wok, then reaches toward the sleek touch switch of the range hood. Sound: oil sizzling into the hot wok, apron fabric rustling. Style lock: modern, clean, well-maintained; no worn or vintage textures.",
+      "seed": 61002,
+      "duration_seconds": 7,
+      "megapixels": 0.9,
+      "steps": 4,
+      "turbo_enabled": true,
+      "filename_prefix": "shots/S002_c01",
+      "width": 1280,
+      "height": 736,
+      "frame_count_actual": 175
+    },
+    "model_files": {
+      "unet_name": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default",
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "clip_type": "minimax",
+      "video_vae_name": "minimax_h3_video_vae_fp16.safetensors",
+      "audio_vae_name": "minimax_h3_audio_vae_fp32.safetensors",
+      "lora_name": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors"
+    },
+    "submitted_by": "Ink-SHEN"
+  }
+}
