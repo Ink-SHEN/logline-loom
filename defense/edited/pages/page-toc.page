@@ -1,0 +1,200 @@
+pageType: table_of_contents
+background:
+  type: solid
+  color: "#0C0913"
+notes: 目录页：10 秒带过——先放映成片，然后从哲学、流水线、剧本选择、分工四个方面讲。
+elements:
+  - elementId: toc-kicker
+    elementType: text
+    bounds: [60, 40, 300, 16]
+    content:
+      text: |-
+        <p>CONTENTS</p>
+      wrap: false
+      style: $text2
+  - elementId: toc-pageno
+    elementType: text
+    bounds: [860, 40, 40, 16]
+    content:
+      text: |-
+        <p style="text-align: right;">02</p>
+      wrap: false
+      align:
+        - right
+        - top
+      style: $text1
+  - elementId: toc-title
+    elementType: text
+    bounds: [60, 62, 400, 44]
+    content:
+      text: |-
+        <p>目录</p>
+      wrap: false
+      style: $text3
+  - elementId: toc-side-mark
+    elementType: shape
+    bounds: [60, 122, 56, 4]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#624AFF"
+  # 00 成片放映
+  - elementId: toc-n0
+    elementType: text
+    bounds: [60, 136, 70, 40]
+    content:
+      text: |-
+        <p>00</p>
+      wrap: false
+      style: $text4
+  - elementId: toc-h0
+    elementType: text
+    bounds: [150, 136, 400, 28]
+    content:
+      text: |-
+        <p>成片放映</p>
+      wrap: false
+      style: $text5
+  - elementId: toc-b0
+    elementType: text
+    bounds: [150, 170, 690, 22]
+    content:
+      text: |-
+        <p>先看成品：《清单》，226 秒。</p>
+      wrap: false
+      style: $text6
+  - elementId: toc-play
+    elementType: icon
+    bounds: [856, 144, 20, 20]
+    iconName: "fas:play"
+    fill:
+      type: solid
+      color: "#624AFF"
+  - elementId: toc-r0
+    elementType: shape
+    bounds: [60, 200, 840, 1]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#332B4D"
+  # 01
+  - elementId: toc-n1
+    elementType: text
+    bounds: [60, 216, 70, 40]
+    content:
+      text: |-
+        <p>01</p>
+      wrap: false
+      style: $text4
+  - elementId: toc-h1
+    elementType: text
+    bounds: [150, 216, 400, 28]
+    content:
+      text: |-
+        <p>设计哲学</p>
+      wrap: false
+      style: $text5
+  - elementId: toc-b1
+    elementType: text
+    bounds: [150, 250, 690, 22]
+    content:
+      text: |-
+        <p>方便地产出短片；想参与时，每一步都能介入。</p>
+      wrap: false
+      style: $text6
+  - elementId: toc-r1
+    elementType: shape
+    bounds: [60, 280, 840, 1]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#332B4D"
+  # 02
+  - elementId: toc-n2
+    elementType: text
+    bounds: [60, 296, 70, 40]
+    content:
+      text: |-
+        <p>02</p>
+      wrap: false
+      style: $text4
+  - elementId: toc-h2
+    elementType: text
+    bounds: [150, 296, 400, 28]
+    content:
+      text: |-
+        <p>流水线架构</p>
+      wrap: false
+      style: $text5
+  - elementId: toc-b2
+    elementType: text
+    bounds: [150, 330, 690, 22]
+    content:
+      text: |-
+        <p>七个角色 · 七道契约 · 两处人工关口。</p>
+      wrap: false
+      style: $text6
+  - elementId: toc-r2
+    elementType: shape
+    bounds: [60, 360, 840, 1]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#332B4D"
+  # 03
+  - elementId: toc-n3
+    elementType: text
+    bounds: [60, 376, 70, 40]
+    content:
+      text: |-
+        <p>03</p>
+      wrap: false
+      style: $text4
+  - elementId: toc-h3
+    elementType: text
+    bounds: [150, 376, 400, 28]
+    content:
+      text: |-
+        <p>为什么是《清单》</p>
+      wrap: false
+      style: $text5
+  - elementId: toc-b3
+    elementType: text
+    bounds: [150, 410, 690, 22]
+    content:
+      text: |-
+        <p>一个故事，恰好也最适合模型。</p>
+      wrap: false
+      style: $text6
+  - elementId: toc-r3
+    elementType: shape
+    bounds: [60, 440, 840, 1]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#332B4D"
+  # 04
+  - elementId: toc-n4
+    elementType: text
+    bounds: [60, 456, 70, 36]
+    content:
+      text: |-
+        <p>04</p>
+      wrap: false
+      style: $text4
+  - elementId: toc-h4
+    elementType: text
+    bounds: [150, 456, 400, 28]
+    content:
+      text: |-
+        <p>团队分工</p>
+      wrap: false
+      style: $text5
+  - elementId: toc-b4
+    elementType: text
+    bounds: [150, 490, 690, 22]
+    content:
+      text: |-
+        <p>按交接面切：总导演 · 生成与复现 · 中间层与部署。</p>
+      wrap: false
+      style: $text6

@@ -1,0 +1,39 @@
+pageType: content
+background:
+  type: solid
+  color: "$bg"
+notes: "3:45–3:55 过渡：播完后停顿一拍，念完这句直接进设计哲学。"
+elements:
+  - elementId: t-pageno
+    elementType: text
+    bounds: [860, 40, 40, 16]
+    content:
+      style: "$pagemeta"
+      align: [right, top]
+      wrap: false
+      text: "03"
+  - elementId: t-big
+    elementType: text
+    bounds: [60, 150, 840, 190]
+    content:
+      fontSize: 58
+      bold: true
+      color: "$text"
+      lineHeight: 1.35
+      align: [left, middle]
+      text: |
+        <p>一句 logline 进去，</p>
+        <p><span style="color:$primary">一部短片出来。</span></p>
+  - elementId: t-sub
+    elementType: text
+    bounds: [60, 372, 700, 24]
+    content:
+      fontSize: 16
+      color: "$sub"
+      wrap: false
+      text: 这部 213 秒的片子，从一句话开始，走完了一条完整的电影流水线。
+  - elementId: t-bar
+    elementType: shape
+    bounds: [60, 420, 56, 4]
+    shapeName: rect
+    fill: {type: solid, color: "$primary"}

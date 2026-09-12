@@ -1,0 +1,102 @@
+pageType: cover
+background:
+  type: solid
+  color: "$bg"
+notes: "0:00–0:25 冷开场：一句话立住——我们带来两个成果：一台复刻电影流水线的 Agent，和一部由它生产的短片。说完直接播片。"
+elements:
+  # 右侧紫色色面
+  - elementId: cover-block
+    elementType: shape
+    bounds: [688, 0, 272, 540]
+    shapeName: rect
+    fill: {type: solid, color: "$primary"}
+  - elementId: cover-block-title
+    elementType: text
+    bounds: [716, 180, 216, 70]
+    content:
+      fontSize: 46
+      bold: true
+      color: "#FFFFFF"
+      fontFamily: 思源宋体
+      align: [left, middle]
+      wrap: false
+      text: 《清单》
+  - elementId: cover-block-sub
+    elementType: text
+    bounds: [718, 256, 214, 60]
+    content:
+      fontSize: 12
+      color: "#FFFFFFCC"
+      lineHeight: 1.9
+      letterSpacing: 2
+      text: |
+        <p>THE LIST</p>
+        <p>AI 科幻短片 · 213 秒</p>
+  - elementId: cover-block-line
+    elementType: shape
+    bounds: [718, 340, 40, 3]
+    shapeName: rect
+    fill: {type: solid, color: "#FFFFFF"}
+  # 顶部 meta
+  - elementId: cover-meta
+    elementType: text
+    bounds: [60, 44, 560, 18]
+    content:
+      style: "$pagemeta"
+      wrap: false
+      text: 魔搭社区「AI+∞ 开发者创作大赛」· 第二期 · 结题答辩
+  - elementId: cover-meta-line
+    elementType: shape
+    bounds: [60, 74, 560, 1]
+    shapeName: rect
+    fill: {type: solid, color: "$line"}
+  # 主标题
+  - elementId: cover-label
+    elementType: text
+    bounds: [60, 150, 400, 22]
+    content:
+      style: "$kicker"
+      wrap: false
+      text: FILM AGENT
+  - elementId: cover-title
+    elementType: text
+    bounds: [54, 172, 620, 170]
+    content:
+      fontSize: 150
+      bold: true
+      color: "$text"
+      letterSpacing: 4
+      wrap: false
+      align: [left, middle]
+      text: LOOM
+  - elementId: cover-fullname
+    elementType: text
+    bounds: [60, 348, 600, 22]
+    content:
+      fontSize: 15
+      color: "$lavender"
+      letterSpacing: 1
+      wrap: false
+      text: Logline-Oriented Orchestration Machine
+  - elementId: cover-subtitle
+    elementType: text
+    bounds: [60, 388, 600, 40]
+    content:
+      fontSize: 30
+      bold: true
+      color: "$text"
+      wrap: false
+      text: 电影 Agent 与短片《清单》
+  # 底部
+  - elementId: cover-bottom-line
+    elementType: shape
+    bounds: [60, 470, 560, 1]
+    shapeName: rect
+    fill: {type: solid, color: "$line"}
+  - elementId: cover-bottom
+    elementType: text
+    bounds: [60, 484, 560, 18]
+    content:
+      style: "$pagemeta"
+      wrap: false
+      text: 汇报人：××× · 三人团队 · 2026.09

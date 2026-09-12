@@ -1,0 +1,104 @@
+pageType: content
+background:
+  type: solid
+  color: "#0C0913"
+notes: 5:45–6:10 为什么是《清单》：先抛问题（真正的 AI 伦理不在天上，在客厅里），再讲 9 月 5 日编剧 Agent 一次出五部 demo 的海选过程。
+elements:
+  - elementId: w-kicker
+    elementType: text
+    bounds: [60, 40, 300, 16]
+    content:
+      text: |-
+        <p>WHY THIS STORY</p>
+      wrap: false
+      style: $text2
+  - elementId: w-pageno
+    elementType: text
+    bounds: [860, 40, 40, 16]
+    content:
+      text: |-
+        <p style="text-align: right;">08</p>
+      wrap: false
+      align:
+        - right
+        - top
+      style: $text1
+  - elementId: w-brief
+    elementType: text
+    bounds: [60, 78, 500, 20]
+    content:
+      text: |-
+        <p>赛题方向：一个人 · 一个空间 · 一件小事</p>
+      color: "#A49DC4"
+      fontSize: 13
+      fontFamily: MiSans, MiSans
+      wrap: false
+  - elementId: w-q
+    elementType: text
+    bounds: [60, 130, 840, 120]
+    content:
+      text: |-
+        <p style="text-align: left; line-height: 1.5;"><span style="color: #F4F2FB;">真正的 AI 伦理不在天上，在客厅里——</span></p><p style="text-align: left; line-height: 1.5;"><span style="color: #F4F2FB;">当 AI 比你更清楚</span><span style="color: #624AFF;">「什么对你最好」</span><span style="color: #F4F2FB;">，听谁的？</span></p>
+      color: $dk1
+      fontSize: 36
+      bold: true
+      fontFamily: MiSans, MiSans
+      lineHeight: 1.5
+      wrap: true
+      align:
+        - left
+        - middle
+  - elementId: w-bar
+    elementType: shape
+    bounds: [60, 286, 56, 4]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#624AFF"
+  - elementId: w-s-list
+    elementType: text
+    bounds: [60, 329.3, 600, 120]
+    content:
+      text: |-
+        <p style="line-height: 2;">智能音箱替你买东西</p><p style="line-height: 2;">养老管家替你把关健康</p><p style="line-height: 2;">数字永生替你接电话</p><p style="line-height: 2;">……都围着「AI 替人做决定」打转</p>
+      color: "#A49DC4"
+      fontSize: 15
+      fontFamily: MiSans, MiSans
+      lineHeight: 2
+      wrap: true
+  - elementId: w-s-arrow
+    elementType: line
+    bounds: [676, 396, 60, 10]
+    viewBox:
+      - 60
+      - 10
+    points: 0,5 60,5
+    curve: sharp
+    border:
+      style: solid
+      width: 2
+      color: "#624AFF"
+  - elementId: w-s-pick
+    elementType: text
+    bounds: [752, 372, 160, 60]
+    content:
+      text: |-
+        <p style="text-align: left;">《清单》</p>
+      color: "#624AFF"
+      fontSize: 34
+      bold: true
+      fontFamily: 思源宋体, 思源宋体
+      wrap: false
+      align:
+        - left
+        - middle
+  - elementId: w-s-pick-sub
+    elementType: text
+    bounds: [754, 434, 150, 16]
+    content:
+      text: |-
+        <p>最终中选</p>
+      color: "#6B6488"
+      fontSize: 11
+      fontFamily: MiSans, MiSans
+      wrap: false

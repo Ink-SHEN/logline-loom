@@ -1,0 +1,149 @@
+pageType: content
+background:
+  type: solid
+  color: $bg
+notes: 5:45–6:10 为什么是《清单》：先抛问题（真正的 AI 伦理不在天上，在客厅里），再讲 9 月 5 日编剧 Agent 一次出五部 demo 的海选过程。
+elements:
+- elementId: w-kicker
+  elementType: text
+  bounds:
+  - 60
+  - 40
+  - 300
+  - 16
+  content:
+    style: $kicker
+    wrap: false
+    text: WHY THIS STORY
+- elementId: w-pageno
+  elementType: text
+  bounds:
+  - 860
+  - 40
+  - 40
+  - 16
+  content:
+    style: $pagemeta
+    align:
+    - right
+    - top
+    wrap: false
+    text: '07'
+- elementId: w-brief
+  elementType: text
+  bounds:
+  - 60
+  - 78
+  - 500
+  - 20
+  content:
+    fontSize: 13
+    color: $sub
+    wrap: false
+    text: 赛题方向：一个人 · 一个空间 · 一件小事
+- elementId: w-q
+  elementType: text
+  bounds:
+  - 60
+  - 130
+  - 840
+  - 120
+  content:
+    fontSize: 36
+    bold: true
+    color: $text
+    lineHeight: 1.5
+    align:
+    - left
+    - middle
+    text: |
+      <p>真正的 AI 伦理不在天上，在客厅里——</p>
+      <p>当 AI 比你更清楚<span style="color:$primary">「什么对你最好」</span>，听谁的？</p>
+- elementId: w-bar
+  elementType: shape
+  bounds:
+  - 60
+  - 286
+  - 56
+  - 4
+  shapeName: rect
+  fill:
+    type: solid
+    color: $primary
+- elementId: w-s-label
+  elementType: text
+  bounds:
+  - 60
+  - 322
+  - 500
+  - 18
+  content:
+    fontSize: 12
+    color: $faint
+    letterSpacing: 2
+    wrap: false
+    text: 9 月 5 日 · 编剧 Agent 一次产出五部候选 demo
+- elementId: w-s-list
+  elementType: text
+  bounds:
+  - 60
+  - 352
+  - 600
+  - 120
+  content:
+    fontSize: 15
+    color: $sub
+    lineHeight: 2.0
+    text: |
+      <p>智能音箱替你买东西</p>
+      <p>养老管家替你把关健康</p>
+      <p>数字永生替你接电话</p>
+      <p>……都围着「AI 替人做决定」打转</p>
+- elementId: w-s-arrow
+  elementType: line
+  bounds:
+  - 676
+  - 396
+  - 60
+  - 10
+  viewBox:
+  - 60
+  - 10
+  points: 0,5 60,5
+  curve: sharp
+  arrow:
+  - null
+  - null
+  border:
+    style: solid
+    width: 2
+    color: $primary
+- elementId: w-s-pick
+  elementType: text
+  bounds:
+  - 752
+  - 372
+  - 160
+  - 60
+  content:
+    fontSize: 34
+    bold: true
+    color: $primary
+    fontFamily: 思源宋体
+    align:
+    - left
+    - middle
+    wrap: false
+    text: 《清单》
+- elementId: w-s-pick-sub
+  elementType: text
+  bounds:
+  - 754
+  - 434
+  - 150
+  - 16
+  content:
+    fontSize: 11
+    color: $faint
+    wrap: false
+    text: 最终中选

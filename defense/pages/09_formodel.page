@@ -1,0 +1,167 @@
+pageType: content
+background:
+  type: solid
+  color: "$bg"
+notes: "6:35–6:55 为模型而选：绕开短板、踩中强项、控制一致性；指着曲线说低谷在冰箱锁死、顶点在亡妻条款，结尾收在 9 分。落点：「好」由谁定义？片子不给答案。"
+elements:
+  - elementId: m-kicker
+    elementType: text
+    bounds: [60, 40, 300, 16]
+    content:
+      style: "$kicker"
+      wrap: false
+      text: STORY × MODEL
+  - elementId: m-pageno
+    elementType: text
+    bounds: [860, 40, 40, 16]
+    content:
+      style: "$pagemeta"
+      align: [right, top]
+      wrap: false
+      text: "09"
+  - elementId: m-title
+    elementType: text
+    bounds: [60, 62, 600, 44]
+    content:
+      style: "$header"
+      wrap: false
+      text: 选它，不只为故事，也为模型
+  # 左列三条
+  - elementId: m-i1h
+    elementType: text
+    bounds: [60, 140, 400, 24]
+    content: {fontSize: 18, bold: true, color: "$text", wrap: false, text: 绕开短板}
+  - elementId: m-i1b
+    elementType: text
+    bounds: [60, 168, 400, 40]
+    content:
+      fontSize: 13
+      color: "$sub"
+      lineHeight: 1.6
+      text: 主角只有老周一人，管家只闻其声——避开视频模型最不擅长的多人对白与口型。
+  - elementId: m-r1
+    elementType: shape
+    bounds: [60, 222, 400, 1]
+    shapeName: rect
+    fill: {type: solid, color: "$line"}
+  - elementId: m-i2h
+    elementType: text
+    bounds: [60, 240, 400, 24]
+    content: {fontSize: 18, bold: true, color: "$text", wrap: false, text: 踩中强项}
+  - elementId: m-i2b
+    elementType: text
+    bounds: [60, 268, 400, 40]
+    content:
+      fontSize: 13
+      color: "$sub"
+      lineHeight: 1.6
+      text: 台词少、情绪靠声音与细节——正对 MiniMax-H3 原生 32kHz 立体声生成的强项。
+  - elementId: m-r2
+    elementType: shape
+    bounds: [60, 322, 400, 1]
+    shapeName: rect
+    fill: {type: solid, color: "$line"}
+  - elementId: m-i3h
+    elementType: text
+    bounds: [60, 340, 400, 24]
+    content: {fontSize: 18, bold: true, color: "$text", wrap: false, text: 控制一致性}
+  - elementId: m-i3b
+    elementType: text
+    bounds: [60, 368, 400, 40]
+    content:
+      fontSize: 13
+      color: "$sub"
+      lineHeight: 1.6
+      text: 人物单、场景少：自家厨房、客厅、楼下棋摊——全片人物一致性最好控制。
+  # 大数字
+  - elementId: m-n1
+    elementType: text
+    bounds: [60, 430, 130, 60]
+    content:
+      align: [left, bottom]
+      wrap: false
+      text: |
+        <p><span style="font-size:40px; color:$primary"><strong>3</strong></span><span style="font-size:14px; color:$sub"> 场戏</span></p>
+  - elementId: m-n2
+    elementType: text
+    bounds: [200, 430, 140, 60]
+    content:
+      align: [left, bottom]
+      wrap: false
+      text: |
+        <p><span style="font-size:40px; color:$primary"><strong>14</strong></span><span style="font-size:14px; color:$sub"> 个节拍</span></p>
+  - elementId: m-n3
+    elementType: text
+    bounds: [350, 430, 130, 60]
+    content:
+      align: [left, bottom]
+      wrap: false
+      text: |
+        <p><span style="font-size:40px; color:$primary"><strong>213</strong></span><span style="font-size:14px; color:$sub"> 秒</span></p>
+  # 右侧情绪曲线
+  - elementId: m-chart-title
+    elementType: text
+    bounds: [520, 140, 380, 18]
+    content:
+      fontSize: 12
+      color: "$faint"
+      letterSpacing: 2
+      align: [left, top]
+      wrap: false
+      text: 情绪曲线 · 十四个节拍（0–10 分）
+  - elementId: m-chart
+    elementType: chart
+    bounds: [510, 162, 400, 236]
+    data:
+      cols: [beat, emotion]
+      rows:
+        - ["1", 5]
+        - ["2", 5]
+        - ["3", 5]
+        - ["4", 4]
+        - ["5", 3]
+        - ["6", 4]
+        - ["7", 5]
+        - ["8", 5]
+        - ["9", 6]
+        - ["10", 7]
+        - ["11", 7]
+        - ["12", 9]
+        - ["13", 8]
+        - ["14", 9]
+    series:
+      - type: line
+        encode: {x: beat, y: emotion}
+        name: 情绪
+        smooth: true
+        width: 3
+        lineColor: "$primary"
+        marker: {shape: circle, size: 5, fill: "$lavender"}
+    legend: false
+    xAxis:
+      label: {color: "$faint", fontSize: 10}
+      axisLine: {color: "$line"}
+      gridLine: false
+    yAxis:
+      min: 0
+      max: 10
+      label: {color: "$faint", fontSize: 10}
+      gridLine: {style: dot, color: "$line", width: 1}
+  - elementId: m-anno-low
+    elementType: text
+    bounds: [556, 406, 200, 16]
+    content: {fontSize: 11, color: "$sub", wrap: false, text: 低谷 · 冰箱锁死（3 分）}
+  - elementId: m-anno-peak
+    elementType: text
+    bounds: [700, 406, 210, 16]
+    content: {fontSize: 11, color: "$lavender", align: [right, top], wrap: false, text: 顶点 · 亡妻条款（9 分）}
+  - elementId: m-q
+    elementType: text
+    bounds: [510, 456, 400, 46]
+    content:
+      fontSize: 16
+      color: "$text"
+      lineHeight: 1.6
+      text: |
+        <p>「好」，到底由谁定义？</p>
+        <p><span style="font-size:12px; color:$faint">片子不给答案，只把问号留在最后一个镜头里。</span></p>

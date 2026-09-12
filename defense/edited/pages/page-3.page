@@ -1,0 +1,49 @@
+pageType: content
+background:
+  type: solid
+  color: "#0C0913"
+notes: 3:45–3:55 过渡：播完后停顿一拍，念完这句直接进设计哲学。
+elements:
+  - elementId: t-pageno
+    elementType: text
+    bounds: [860, 40, 40, 16]
+    content:
+      text: |-
+        <p style="text-align: right;">04</p>
+      wrap: false
+      align:
+        - right
+        - top
+      style: $text1
+  - elementId: t-big
+    elementType: text
+    bounds: [60, 150, 840, 190]
+    content:
+      text: |-
+        <p style="text-align: left; line-height: 1.35;"><span style="color: #F4F2FB;">一句 logline 进去，</span></p><p style="text-align: left; line-height: 1.35;"><span style="color: #624AFF;">一部短片出来。</span></p>
+      color: $dk1
+      fontSize: 58
+      bold: true
+      fontFamily: MiSans, MiSans
+      lineHeight: 1.35
+      wrap: true
+      align:
+        - left
+        - middle
+  - elementId: t-sub
+    elementType: text
+    bounds: [60, 372, 700, 24]
+    content:
+      text: |-
+        <p>这部 226 秒的片子，从一句话开始，走完了一条完整的电影流水线。</p>
+      color: "#A49DC4"
+      fontSize: 16
+      fontFamily: MiSans, MiSans
+      wrap: false
+  - elementId: t-bar
+    elementType: shape
+    bounds: [60, 420, 56, 4]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#624AFF"

@@ -1,0 +1,67 @@
+pageType: content
+background:
+  type: solid
+  color: "$bg"
+notes: "6:55–7:20 分工页：按交接面切人，不按模块切——每人手里是一段连续的管线，边界正好是契约文件。"
+elements:
+  - elementId: c-kicker
+    elementType: text
+    bounds: [60, 40, 300, 16]
+    content:
+      style: "$kicker"
+      wrap: false
+      text: CREW
+  - elementId: c-pageno
+    elementType: text
+    bounds: [860, 40, 40, 16]
+    content:
+      style: "$pagemeta"
+      align: [right, top]
+      wrap: false
+      text: "10"
+  - elementId: c-title
+    elementType: text
+    bounds: [60, 62, 400, 44]
+    content:
+      style: "$header"
+      wrap: false
+      text: 分工 · 按交接面切
+  - elementId: c-table
+    elementType: table
+    bounds: [60, 140, 840, 268]
+    columnWidths: [0.15, 0.19, 0.28, 0.38]
+    rowHeights: [0.16, 0.28, 0.28, 0.28]
+    style: "$crew"
+    rows:
+      - - text: 成员
+        - text: 角色
+        - text: Owns
+        - text: 独占职责
+      - - text: |
+            <p><span style="color:$primary"><strong>A</strong></span></p>
+        - text: |
+            <p><strong>总导演</strong></p>
+        - text: 编剧 Agent · 剪辑 Agent
+        - text: 三处人工关口裁决 · 质检标准定义 · 合规自查 · 最终提交
+      - - text: |
+            <p><span style="color:$primary"><strong>B</strong></span></p>
+        - text: |
+            <p><strong>生成与复现</strong></p>
+        - text: 生成 Agent · 重试 Agent
+        - text: ComfyUI API 接入 · GPU 排队与显存管理 · 全量参数留痕
+      - - text: |
+            <p><span style="color:$primary"><strong>C</strong></span></p>
+        - text: |
+            <p><strong>中间层与部署</strong></p>
+        - text: 分镜 · 提示词 · 质检 Agent
+        - text: 视觉一致性资产与 R2V 参考集 · GPU 排班 · 魔搭创空间部署
+  - elementId: c-bottom
+    elementType: text
+    bounds: [60, 442, 840, 40]
+    content:
+      fontSize: 13
+      color: "$sub"
+      lineHeight: 1.7
+      text: |
+        <p>契约先于实现：契约冻结后三人真正并行，边界正好是契约文件，没有两人改同一个 Agent；</p>
+        <p>代价是契约一旦冻结，改动必须全组三人同意。</p>

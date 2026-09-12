@@ -1,0 +1,622 @@
+pageType: content
+background:
+  type: solid
+  color: $bg
+notes: 4:40–5:30 架构页：只讲三点——七个角色、契约交接、两处导演关口。图当背景板扫过，不逐框念。
+elements:
+- elementId: pl-kicker
+  elementType: text
+  bounds:
+  - 60
+  - 40
+  - 300
+  - 16
+  content:
+    style: $kicker
+    wrap: false
+    text: THE PIPELINE
+- elementId: pl-pageno
+  elementType: text
+  bounds:
+  - 860
+  - 40
+  - 40
+  - 16
+  content:
+    style: $pagemeta
+    align:
+    - right
+    - top
+    wrap: false
+    text: '05'
+- elementId: pl-title
+  elementType: text
+  bounds:
+  - 60
+  - 62
+  - 500
+  - 44
+  content:
+    style: $header
+    wrap: false
+    text: 一条流水线，七个角色
+- elementId: pl-title-note
+  elementType: text
+  bounds:
+  - 560
+  - 76
+  - 340
+  - 20
+  content:
+    fontSize: 12
+    color: $faint
+    align:
+    - right
+    - top
+    wrap: false
+    text: 环节之间只交接版本化 JSON 契约
+- elementId: pl-input
+  elementType: text
+  bounds:
+  - 66
+  - 160
+  - 90
+  - 16
+  content:
+    fontSize: 11
+    color: $lavender
+    align:
+    - center
+    - top
+    wrap: false
+    text: 一句 logline
+- elementId: pl-b1
+  elementType: shape
+  bounds:
+  - 66
+  - 186
+  - 90
+  - 64
+  shapeName: rect
+  fill:
+    type: solid
+    color: $bgSoft
+  border:
+    style: solid
+    width: 1
+    color: $line
+- elementId: pl-b1t
+  elementType: text
+  bounds:
+  - 66
+  - 186
+  - 90
+  - 64
+  content:
+    fontSize: 17
+    bold: true
+    color: $text
+    align:
+    - center
+    - middle
+    wrap: false
+    text: 编剧
+- elementId: pl-a1
+  elementType: line
+  bounds:
+  - 156
+  - 214
+  - 33
+  - 8
+  viewBox:
+  - 33
+  - 8
+  points: 0,4 33,4
+  curve: sharp
+  arrow:
+  - null
+  - null
+  border:
+    style: solid
+    width: 1
+    color: $faint
+- elementId: pl-gate1
+  elementType: shape
+  bounds:
+  - 163
+  - 209
+  - 18
+  - 18
+  shapeName: diamond
+  fill:
+    type: solid
+    color: $primary
+- elementId: pl-gate1t
+  elementType: text
+  bounds:
+  - 133
+  - 232
+  - 78
+  - 14
+  content:
+    fontSize: 9
+    color: $primary
+    align:
+    - center
+    - top
+    wrap: false
+    text: 剧本确认
+- elementId: pl-b2
+  elementType: shape
+  bounds:
+  - 189
+  - 186
+  - 90
+  - 64
+  shapeName: rect
+  fill:
+    type: solid
+    color: $bgSoft
+  border:
+    style: solid
+    width: 1
+    color: $line
+- elementId: pl-b2t
+  elementType: text
+  bounds:
+  - 189
+  - 186
+  - 90
+  - 64
+  content:
+    fontSize: 17
+    bold: true
+    color: $text
+    align:
+    - center
+    - middle
+    wrap: false
+    text: 分镜
+- elementId: pl-a2
+  elementType: line
+  bounds:
+  - 279
+  - 214
+  - 33
+  - 8
+  viewBox:
+  - 33
+  - 8
+  points: 0,4 33,4
+  curve: sharp
+  arrow:
+  - null
+  - null
+  border:
+    style: solid
+    width: 1
+    color: $faint
+- elementId: pl-b3
+  elementType: shape
+  bounds:
+  - 312
+  - 186
+  - 90
+  - 64
+  shapeName: rect
+  fill:
+    type: solid
+    color: $bgSoft
+  border:
+    style: solid
+    width: 1
+    color: $line
+- elementId: pl-b3t
+  elementType: text
+  bounds:
+  - 312
+  - 186
+  - 90
+  - 64
+  content:
+    fontSize: 17
+    bold: true
+    color: $text
+    align:
+    - center
+    - middle
+    wrap: false
+    text: 提示词
+- elementId: pl-a3
+  elementType: line
+  bounds:
+  - 402
+  - 214
+  - 33
+  - 8
+  viewBox:
+  - 33
+  - 8
+  points: 0,4 33,4
+  curve: sharp
+  arrow:
+  - null
+  - null
+  border:
+    style: solid
+    width: 1
+    color: $faint
+- elementId: pl-b4
+  elementType: shape
+  bounds:
+  - 435
+  - 186
+  - 90
+  - 64
+  shapeName: rect
+  fill:
+    type: solid
+    color: $bgSoft
+  border:
+    style: solid
+    width: 1
+    color: $primary
+- elementId: pl-b4t
+  elementType: text
+  bounds:
+  - 435
+  - 186
+  - 90
+  - 64
+  content:
+    fontSize: 17
+    bold: true
+    color: $text
+    align:
+    - center
+    - middle
+    wrap: false
+    text: 生成
+- elementId: pl-b4s
+  elementType: text
+  bounds:
+  - 415
+  - 256
+  - 130
+  - 14
+  content:
+    fontSize: 9
+    color: $lavender
+    align:
+    - center
+    - top
+    wrap: false
+    text: MiniMax-H3 · DGX Spark
+- elementId: pl-a4
+  elementType: line
+  bounds:
+  - 525
+  - 214
+  - 33
+  - 8
+  viewBox:
+  - 33
+  - 8
+  points: 0,4 33,4
+  curve: sharp
+  arrow:
+  - null
+  - null
+  border:
+    style: solid
+    width: 1
+    color: $faint
+- elementId: pl-b5
+  elementType: shape
+  bounds:
+  - 558
+  - 186
+  - 90
+  - 64
+  shapeName: rect
+  fill:
+    type: solid
+    color: $bgSoft
+  border:
+    style: solid
+    width: 1
+    color: $line
+- elementId: pl-b5t
+  elementType: text
+  bounds:
+  - 558
+  - 186
+  - 90
+  - 64
+  content:
+    fontSize: 17
+    bold: true
+    color: $text
+    align:
+    - center
+    - middle
+    wrap: false
+    text: 质检
+- elementId: pl-a5
+  elementType: line
+  bounds:
+  - 648
+  - 214
+  - 33
+  - 8
+  viewBox:
+  - 33
+  - 8
+  points: 0,4 33,4
+  curve: sharp
+  arrow:
+  - null
+  - null
+  border:
+    style: solid
+    width: 1
+    color: $faint
+- elementId: pl-b6
+  elementType: shape
+  bounds:
+  - 681
+  - 186
+  - 90
+  - 64
+  shapeName: rect
+  fill:
+    type: solid
+    color: $bgSoft
+  border:
+    style: solid
+    width: 1
+    color: $line
+- elementId: pl-b6t
+  elementType: text
+  bounds:
+  - 681
+  - 186
+  - 90
+  - 64
+  content:
+    fontSize: 17
+    bold: true
+    color: $text
+    align:
+    - center
+    - middle
+    wrap: false
+    text: 剪辑
+- elementId: pl-a6
+  elementType: line
+  bounds:
+  - 771
+  - 214
+  - 33
+  - 8
+  viewBox:
+  - 33
+  - 8
+  points: 0,4 33,4
+  curve: sharp
+  arrow:
+  - null
+  - null
+  border:
+    style: solid
+    width: 1
+    color: $faint
+- elementId: pl-gate2
+  elementType: shape
+  bounds:
+  - 778
+  - 209
+  - 18
+  - 18
+  shapeName: diamond
+  fill:
+    type: solid
+    color: $primary
+- elementId: pl-gate2t
+  elementType: text
+  bounds:
+  - 748
+  - 232
+  - 78
+  - 14
+  content:
+    fontSize: 9
+    color: $primary
+    align:
+    - center
+    - top
+    wrap: false
+    text: 粗剪确认
+- elementId: pl-b7
+  elementType: shape
+  bounds:
+  - 804
+  - 186
+  - 90
+  - 64
+  shapeName: rect
+  fill:
+    type: solid
+    color: $primary
+- elementId: pl-b7t
+  elementType: text
+  bounds:
+  - 804
+  - 186
+  - 90
+  - 64
+  content:
+    fontSize: 17
+    bold: true
+    color: '#FFFFFF'
+    align:
+    - center
+    - middle
+    wrap: false
+    text: 成片
+- elementId: pl-retry
+  elementType: shape
+  bounds:
+  - 558
+  - 316
+  - 90
+  - 36
+  shapeName: rect
+  border:
+    style: dash
+    width: 1
+    color: $faint
+- elementId: pl-retry-t
+  elementType: text
+  bounds:
+  - 558
+  - 316
+  - 90
+  - 36
+  content:
+    fontSize: 13
+    color: $sub
+    align:
+    - center
+    - middle
+    wrap: false
+    text: 重试 · 换种子
+- elementId: pl-r1
+  elementType: line
+  bounds:
+  - 598
+  - 250
+  - 10
+  - 66
+  viewBox:
+  - 10
+  - 66
+  points: 5,0 5,66
+  curve: sharp
+  arrow:
+  - null
+  - null
+  border:
+    style: dash
+    width: 1
+    color: $faint
+- elementId: pl-r1-arrow
+  elementType: shape
+  bounds:
+  - 598
+  - 304
+  - 10
+  - 9
+  shapeName: triangle
+  rotation: 180
+  fill:
+    type: solid
+    color: $faint
+- elementId: pl-r1t
+  elementType: text
+  bounds:
+  - 612
+  - 274
+  - 40
+  - 14
+  content:
+    fontSize: 9
+    color: $faint
+    wrap: false
+    text: fail
+- elementId: pl-r2
+  elementType: line
+  bounds:
+  - 480
+  - 250
+  - 78
+  - 84
+  viewBox:
+  - 78
+  - 84
+  points: 78,84 78,30 5,30 5,0
+  curve: sharp
+  arrow:
+  - null
+  - null
+  border:
+    style: dash
+    width: 1
+    color: $faint
+- elementId: pl-r2-arrow
+  elementType: shape
+  bounds:
+  - 480
+  - 251
+  - 10
+  - 9
+  shapeName: triangle
+  fill:
+    type: solid
+    color: $faint
+- elementId: pl-r2t
+  elementType: text
+  bounds:
+  - 416
+  - 288
+  - 62
+  - 14
+  content:
+    fontSize: 9
+    color: $faint
+    align:
+    - center
+    - top
+    wrap: false
+    text: new seed
+- elementId: pl-contracts
+  elementType: text
+  bounds:
+  - 60
+  - 388
+  - 840
+  - 18
+  content:
+    fontSize: 12
+    color: $sub
+    align:
+    - center
+    - top
+    wrap: false
+    text: c01 片约 → c02 剧本 → c03 分镜 → c04 提示词 → c05 产物 → c06 质检 → c07 剪辑决策
+- elementId: pl-rule
+  elementType: shape
+  bounds:
+  - 60
+  - 430
+  - 840
+  - 1
+  shapeName: rect
+  fill:
+    type: solid
+    color: $line
+- elementId: pl-takeaway
+  elementType: text
+  bounds:
+  - 60
+  - 452
+  - 840
+  - 24
+  content:
+    fontSize: 16
+    color: $text
+    align:
+    - center
+    - top
+    wrap: false
+    text: 就像剧组里的剧本、分镜表与场记单——环节之间交接的是正式文书，不是口头沟通。

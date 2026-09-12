@@ -1,0 +1,122 @@
+pageType: content
+background:
+  type: solid
+  color: "#0C0913"
+notes: 0:00–0:25 冷开场：一句话立住——我们带来两个成果：一台复刻电影流水线的 Agent，和一部由它生产的短片。说完直接播片。
+elements:
+  - elementId: cover-block
+    elementType: shape
+    bounds: [688, 0, 272, 540]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#624AFF"
+  - elementId: cover-block-title
+    elementType: text
+    bounds: [716, 180, 216, 70]
+    content:
+      text: |-
+        <p style="text-align: left;">《清单》</p>
+      color: $lt1
+      fontSize: 46
+      bold: true
+      fontFamily: 思源宋体, 思源宋体
+      wrap: false
+      align:
+        - left
+        - middle
+  - elementId: cover-block-sub
+    elementType: text
+    bounds: [718, 256, 214, 60]
+    opacity: 0.8
+    content:
+      text: |-
+        <p style="line-height: 1.9;">THE LIST</p><p style="line-height: 1.9;">AI 科幻短片 · 226 秒</p>
+      color: $lt1
+      fontSize: 12
+      fontFamily: MiSans, MiSans
+      lineHeight: 1.9
+      letterSpacing: 2
+      wrap: true
+  - elementId: cover-block-line
+    elementType: shape
+    bounds: [718, 340, 40, 3]
+    shapeName: rect
+    fill:
+      type: solid
+      color: $lt1
+  - elementId: cover-meta
+    elementType: text
+    bounds: [60, 44, 560, 18]
+    content:
+      text: |-
+        <p>魔搭社区「AI+∞ 开发者创作大赛」· 人工智能工程实践结题答辩</p>
+      wrap: false
+      style: $text1
+  - elementId: cover-meta-line
+    elementType: shape
+    bounds: [60, 74, 560, 1]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#332B4D"
+  - elementId: cover-label
+    elementType: text
+    bounds: [60, 150, 400, 22]
+    content:
+      text: |-
+        <p>FILM AGENT</p>
+      wrap: false
+      style: $text2
+  - elementId: cover-title
+    elementType: text
+    bounds: [54, 172, 620, 170]
+    content:
+      text: |-
+        <p style="text-align: left;">LOOM</p>
+      color: "#F4F2FB"
+      fontSize: 150
+      bold: true
+      fontFamily: MiSans, MiSans
+      letterSpacing: 4
+      wrap: false
+      align:
+        - left
+        - middle
+  - elementId: cover-fullname
+    elementType: text
+    bounds: [60, 348, 600, 22]
+    content:
+      text: |-
+        <p>Logline-Oriented Orchestration Machine</p>
+      color: "#B9ACFF"
+      fontSize: 15
+      fontFamily: MiSans, MiSans
+      letterSpacing: 1
+      wrap: false
+  - elementId: cover-subtitle
+    elementType: text
+    bounds: [60, 388, 600, 40]
+    content:
+      text: |-
+        <p>电影 Agent 与短片《清单》</p>
+      color: "#F4F2FB"
+      fontSize: 30
+      bold: true
+      fontFamily: MiSans, MiSans
+      wrap: false
+  - elementId: cover-bottom-line
+    elementType: shape
+    bounds: [60, 470, 560, 1]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#332B4D"
+  - elementId: cover-bottom
+    elementType: text
+    bounds: [60, 484, 560, 18]
+    content:
+      text: |-
+        <p>汇报人：沈墨涵 · 2026.09</p>
+      wrap: false
+      style: $text1

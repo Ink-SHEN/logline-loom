@@ -1,0 +1,88 @@
+pageType: content
+background:
+  type: solid
+  color: "#0C0913"
+notes: 0:25–3:45 放映《清单》成片（3 分 33 秒）。放映中不讲解。放映前：把本页链接替换为成片地址，并准备本地文件双备份。
+elements:
+  - elementId: v-kicker
+    elementType: text
+    bounds: [60, 40, 300, 16]
+    content:
+      text: |-
+        <p>SCREENING</p>
+      wrap: false
+      style: $text2
+  - elementId: v-pageno
+    elementType: text
+    bounds: [860, 40, 40, 16]
+    content:
+      text: |-
+        <p style="text-align: right;">03</p>
+      wrap: false
+      align:
+        - right
+        - top
+      style: $text1
+  - elementId: v-frame
+    elementType: shape
+    bounds: [200, 92, 560, 315]
+    shapeName: rect
+    border:
+      style: solid
+      width: 1
+      color: "#332B4D"
+  - elementId: v-title
+    elementType: text
+    bounds: [200, 228, 560, 34]
+    content:
+      text: |-
+        <p style="text-align: center;">《清单》 · THE LIST</p>
+      color: "#F4F2FB"
+      fontSize: 44
+      bold: true
+      fontFamily: MiSans, MiSans
+      letterSpacing: 4
+      wrap: false
+      align:
+        - center
+        - middle
+  - elementId: v-link
+    elementType: text
+    bounds: [230, 309.1, 500, 26]
+    content:
+      text: |-
+        <p style="text-align: center;"><a href="清单_1.25x.mp4">清单_1.25x.mp4</a></p>
+      color: $dk1
+      fontSize: 17
+      wrap: false
+      align:
+        - center
+        - middle
+  - elementId: v-corner-tl
+    elementType: shape
+    bounds: [200, 92, 24, 3]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#624AFF"
+  - elementId: v-corner-tl2
+    elementType: shape
+    bounds: [200, 92, 3, 24]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#624AFF"
+  - elementId: v-corner-br
+    elementType: shape
+    bounds: [736, 404, 24, 3]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#624AFF"
+  - elementId: v-corner-br2
+    elementType: shape
+    bounds: [757, 383, 3, 24]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#624AFF"

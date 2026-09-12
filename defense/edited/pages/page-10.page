@@ -1,0 +1,121 @@
+pageType: content
+background:
+  type: solid
+  color: "#0C0913"
+notes: 6:55–7:20 分工页：按交接面切人，不按模块切——每人手里是一段连续的管线，边界正好是契约文件。
+elements:
+  - elementId: c-kicker
+    elementType: text
+    bounds: [60, 40, 300, 16]
+    content:
+      text: |-
+        <p>CREW</p>
+      wrap: false
+      style: $text2
+  - elementId: c-pageno
+    elementType: text
+    bounds: [860, 40, 40, 16]
+    content:
+      text: |-
+        <p style="text-align: right;">11</p>
+      wrap: false
+      align:
+        - right
+        - top
+      style: $text1
+  - elementId: c-title
+    elementType: text
+    bounds: [60, 62, 400, 44]
+    content:
+      text: |-
+        <p>分工 · 按交接面切</p>
+      wrap: false
+      style: $text3
+  - elementId: c-table
+    elementType: table
+    bounds: [60, 140, 840, 268]
+    columnWidths:
+      - 0.15
+      - 0.19
+      - 0.28
+      - 0.38
+    rowHeights:
+      - 0.16
+      - 0.28
+      - 0.28
+      - 0.28
+    rows:
+      - - text: |-
+            <p style="text-align: left; line-height: 1.5;">成员</p>
+        - text: |-
+            <p style="text-align: left; line-height: 1.5;">角色</p>
+        - text: |-
+            <p style="text-align: left; line-height: 1.5;">Owns</p>
+        - text: |-
+            <p style="text-align: left; line-height: 1.5;">独占职责</p>
+      - - text: |-
+            <p style="text-align: left; line-height: 1.5;">沈墨涵</p>
+          color: "#624AFF"
+          fontSize: 14
+          bold: true
+        - text: |-
+            <p style="text-align: left; line-height: 1.5;">总导演</p>
+          color: "#F4F2FB"
+          fontSize: 14
+          bold: true
+        - text: |-
+            <p style="text-align: left; line-height: 1.5;">编剧 Agent · 剪辑 Agent · 分镜 · 提示词</p>
+          color: "#F4F2FB"
+          fontSize: 14
+        - text: |-
+            <p style="text-align: left; line-height: 1.5;">三处人工关口裁决 · 合规自查 · 最终提交 · 魔搭创空间部署</p>
+          color: "#F4F2FB"
+          fontSize: 14
+      - - text: |-
+            <p style="text-align: left; line-height: 1.5;">肖栋文</p>
+          color: "#624AFF"
+          fontSize: 14
+          bold: true
+        - text: |-
+            <p style="text-align: left; line-height: 1.5;">生成与复现</p>
+          color: "#F4F2FB"
+          fontSize: 14
+          bold: true
+        - text: |-
+            <p style="text-align: left; line-height: 1.5;">生成 Agent · 重试 Agent · 生成视频</p>
+          color: "#F4F2FB"
+          fontSize: 14
+        - text: |-
+            <p style="text-align: left; line-height: 1.5;">ComfyUI API 接入 · GPU 排队与显存管理 · 全量参数留痕</p>
+          color: "#F4F2FB"
+          fontSize: 14
+      - - text: |-
+            <p style="text-align: left; line-height: 1.5;">王宣皓</p>
+          color: "#624AFF"
+          fontSize: 14
+          bold: true
+        - text: |-
+            <p style="text-align: left; line-height: 1.5;">中间层与部署</p>
+          color: "#F4F2FB"
+          fontSize: 14
+          bold: true
+        - text: |-
+            <p style="text-align: left; line-height: 1.5;">质检 Agent · 生成视频</p>
+          color: "#F4F2FB"
+          fontSize: 14
+        - text: |-
+            <p style="text-align: left; line-height: 1.5;">视觉一致性资产与 R2V 参考集 · GPU 排班</p>
+          color: "#F4F2FB"
+          fontSize: 14
+    style: $table1
+  - elementId: c-bottom
+    elementType: text
+    bounds: [60, 442, 840, 40]
+    content:
+      text: |-
+        <p style="line-height: 1.7;">契约是协作的基础</p>
+      color: "#A49DC4"
+      fontSize: 13
+      fontFamily: MiSans, MiSans
+      lineHeight: 1.7
+      wrap: true

@@ -1,0 +1,243 @@
+pageType: content
+background:
+  type: solid
+  color: "#0C0913"
+notes: 6:35–6:55 为模型而选：绕开短板、踩中强项、控制一致性；指着曲线说低谷在冰箱锁死、顶点在亡妻条款，结尾收在 9 分。落点：「好」由谁定义？片子不给答案。
+elements:
+  - elementId: m-kicker
+    elementType: text
+    bounds: [60, 40, 300, 16]
+    content:
+      text: |-
+        <p>STORY × MODEL</p>
+      wrap: false
+      style: $text2
+  - elementId: m-pageno
+    elementType: text
+    bounds: [860, 40, 40, 16]
+    content:
+      text: |-
+        <p style="text-align: right;">10</p>
+      wrap: false
+      align:
+        - right
+        - top
+      style: $text1
+  - elementId: m-title
+    elementType: text
+    bounds: [60, 62, 600, 44]
+    content:
+      text: |-
+        <p>选它，不只为故事，也为模型</p>
+      wrap: false
+      style: $text3
+  - elementId: m-i1h
+    elementType: text
+    bounds: [60, 140, 400, 24]
+    content:
+      text: |-
+        <p>绕开短板</p>
+      wrap: false
+      style: $text8
+  - elementId: m-i1b
+    elementType: text
+    bounds: [60, 168, 400, 40]
+    content:
+      text: |-
+        <p style="line-height: 1.6;">主角只有老周一人，管家只闻其声——避开视频模型最不擅长的多人对白与口型。</p>
+      wrap: true
+      style: $text9
+  - elementId: m-r1
+    elementType: shape
+    bounds: [60, 222, 400, 1]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#332B4D"
+  - elementId: m-i2h
+    elementType: text
+    bounds: [60, 240, 400, 24]
+    content:
+      text: |-
+        <p>踩中强项</p>
+      wrap: false
+      style: $text8
+  - elementId: m-i2b
+    elementType: text
+    bounds: [60, 268, 400, 40]
+    content:
+      text: |-
+        <p style="line-height: 1.6;">台词少、情绪靠声音与细节——正对 MiniMax-H3 原生 32kHz 立体声生成的强项。</p>
+      wrap: true
+      style: $text9
+  - elementId: m-r2
+    elementType: shape
+    bounds: [60, 322, 400, 1]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#332B4D"
+  - elementId: m-i3h
+    elementType: text
+    bounds: [60, 340, 400, 24]
+    content:
+      text: |-
+        <p>控制一致性</p>
+      wrap: false
+      style: $text8
+  - elementId: m-i3b
+    elementType: text
+    bounds: [60, 368, 400, 40]
+    content:
+      text: |-
+        <p style="line-height: 1.6;">人物单、场景少：自家厨房、客厅、楼下棋摊——全片人物一致性最好控制。</p>
+      wrap: true
+      style: $text9
+  - elementId: m-n1
+    elementType: text
+    bounds: [60, 430, 130, 60]
+    content:
+      text: |-
+        <p style="text-align: left;"><span style="color: #624AFF; font-size: 40px;"><strong>3</strong></span><span style="color: #A49DC4; font-size: 14px;"> 场戏</span></p>
+      wrap: false
+      align:
+        - left
+        - bottom
+      style: $text10
+  - elementId: m-n2
+    elementType: text
+    bounds: [200, 430, 140, 60]
+    content:
+      text: |-
+        <p style="text-align: left;"><span style="color: #624AFF; font-size: 40px;"><strong>14</strong></span><span style="color: #A49DC4; font-size: 14px;"> 个节拍</span></p>
+      wrap: false
+      align:
+        - left
+        - bottom
+      style: $text10
+  - elementId: m-n3
+    elementType: text
+    bounds: [350, 430, 130, 60]
+    content:
+      text: |-
+        <p style="text-align: left;"><span style="color: #624AFF; font-size: 40px;"><strong>226</strong></span><span style="color: #A49DC4; font-size: 14px;"> 秒</span></p>
+      wrap: false
+      align:
+        - left
+        - bottom
+      style: $text10
+  - elementId: m-chart-title
+    elementType: text
+    bounds: [520, 140, 380, 18]
+    content:
+      text: |-
+        <p style="text-align: left;">情绪曲线 · 十四个节拍（0–10 分）</p>
+      color: "#6B6488"
+      fontSize: 12
+      fontFamily: MiSans, MiSans
+      letterSpacing: 2
+      wrap: false
+      align:
+        - left
+        - top
+  - elementType: chart
+    data:
+      cols:
+        - category
+        - series_1
+      rows:
+        - ["1", 5]
+        - ["2", 5]
+        - ["3", 5]
+        - ["4", 4]
+        - ["5", 3]
+        - ["6", 4]
+        - ["7", 5]
+        - ["8", 5]
+        - ["9", 6]
+        - ["10", 7]
+        - ["11", 7]
+        - ["12", 9]
+        - ["13", 8]
+        - ["14", 9]
+    series:
+      - type: line
+        encode:
+          x: category
+          y: series_1
+        name: 情绪
+        smooth: true
+        lineStyle: solid
+        width: 3
+        lineColor: "#624AFF"
+        marker:
+          shape: circle
+          size: 5
+          fill: "#B9ACFF"
+          border:
+            style: solid
+            width: 3
+            color: "#624AFF"
+        dataLabels:
+    xAxis:
+      label:
+        color: "#6B6488"
+        fontSize: 10
+      axisLine:
+        style: solid
+        width: 1
+        color: "#332B4D"
+      gridLine: false
+      numberFormat: General
+    yAxis:
+      label:
+        color: "#6B6488"
+        fontSize: 10
+      axisLine:
+        style: solid
+        width: 1
+        color: "#888888"
+      gridLine:
+        style: dot
+        width: 1
+        color: "#332B4D"
+      min: 0
+      max: 10
+      numberFormat: General
+    legend: false
+    dataLabels:
+    elementId: m-chart
+    bounds: [510, 162, 400, 236]
+  - elementId: m-anno-low
+    elementType: text
+    bounds: [556, 406, 200, 16]
+    content:
+      text: |-
+        <p>低谷 · 冰箱锁死（3 分）</p>
+      color: "#A49DC4"
+      fontSize: 11
+      fontFamily: MiSans, MiSans
+      wrap: false
+  - elementId: m-anno-peak
+    elementType: text
+    bounds: [700, 406, 210, 16]
+    content:
+      text: |-
+        <p style="text-align: right;">顶点 · 亡妻条款（9 分）</p>
+      color: "#B9ACFF"
+      fontSize: 11
+      fontFamily: MiSans, MiSans
+      wrap: false
+      align:
+        - right
+        - top
+  - elementId: m-q
+    elementType: text
+    bounds: [510, 456, 400, 46]
+    content:
+      text: |-
+        <p style="line-height: 1.6;"><span style="color: #F4F2FB; font-size: 16px;">「好」，到底由谁定义？</span></p><p style="line-height: 1.6;"><span style="color: #6B6488; font-size: 12px;">片子不给答案，只把问号留在最后一个镜头里。</span></p>
+      color: $dk1
+      fontFamily: MiSans, MiSans
+      lineHeight: 1.6
+      wrap: true

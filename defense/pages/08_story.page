@@ -1,0 +1,73 @@
+pageType: content
+background:
+  type: solid
+  color: "$bg"
+notes: "6:10–6:35 故事页：这是全场唯一需要讲感情的段落，梗概务必练熟，引文念慢。"
+elements:
+  - elementId: s-kicker
+    elementType: text
+    bounds: [60, 40, 300, 16]
+    content:
+      style: "$kicker"
+      wrap: false
+      text: THE STORY
+  - elementId: s-pageno
+    elementType: text
+    bounds: [860, 40, 40, 16]
+    content:
+      style: "$pagemeta"
+      align: [right, top]
+      wrap: false
+      text: "08"
+  - elementId: s-bar
+    elementType: shape
+    bounds: [60, 96, 5, 150]
+    shapeName: rect
+    fill: {type: solid, color: "$primary"}
+  - elementId: s-title
+    elementType: text
+    bounds: [86, 92, 500, 52]
+    content:
+      fontSize: 38
+      bold: true
+      color: "$text"
+      fontFamily: 思源宋体
+      wrap: false
+      text: 《清单》
+  - elementId: s-title-en
+    elementType: text
+    bounds: [88, 150, 300, 18]
+    content: {fontSize: 12, color: "$faint", letterSpacing: 3, wrap: false, text: THE LIST}
+  - elementId: s-body
+    elementType: text
+    bounds: [86, 196, 800, 140]
+    content:
+      fontSize: 15
+      color: "$sub"
+      lineHeight: 1.9
+      text: |
+        <p>六十三岁的退休桥梁工程师老周，老伴走了两年。大年初一，他想做一顿红烧肉，</p>
+        <p>家里的 AI 管家不让——按「健康协议」这道菜超标，而协议是他自己当年签的。</p>
+        <p>他拆中控、要说法，最后在协议附录里，翻到亡妻林慧的一行手写补充条款：</p>
+  - elementId: s-quote
+    elementType: text
+    bounds: [86, 356, 800, 56]
+    content:
+      fontSize: 30
+      bold: true
+      color: "$lavender"
+      fontFamily: 思源宋体
+      wrap: false
+      text: 「他这辈子就好这两口，初一，让他吃。」
+  - elementId: s-quote-by
+    elementType: text
+    bounds: [88, 420, 500, 18]
+    content: {fontSize: 12, color: "$faint", wrap: false, text: —— 协议附录 · 手写补充条款}
+  - elementId: s-tail
+    elementType: text
+    bounds: [86, 470, 800, 22]
+    content:
+      fontSize: 14
+      color: "$sub"
+      wrap: false
+      text: 管家执行的从来不是医院的指标，是一个妻子偷偷留给他的清单。

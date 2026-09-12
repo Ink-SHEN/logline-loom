@@ -1,0 +1,88 @@
+pageType: content
+background:
+  type: solid
+  color: "$bg"
+notes: "0:25–3:45 放映《清单》成片（3 分 33 秒）。放映中不讲解。放映前：把本页链接替换为成片地址，并准备本地文件双备份。"
+elements:
+  - elementId: v-kicker
+    elementType: text
+    bounds: [60, 40, 300, 16]
+    content:
+      style: "$kicker"
+      wrap: false
+      text: SCREENING
+  - elementId: v-pageno
+    elementType: text
+    bounds: [860, 40, 40, 16]
+    content:
+      style: "$pagemeta"
+      align: [right, top]
+      wrap: false
+      text: "02"
+  # 16:9 放映框
+  - elementId: v-frame
+    elementType: shape
+    bounds: [200, 92, 560, 315]
+    shapeName: rect
+    border: {style: solid, width: 1, color: "$line"}
+  - elementId: v-ring
+    elementType: shape
+    bounds: [437, 206, 86, 86]
+    shapeName: ellipse
+    border: {style: solid, width: 2, color: "$primary"}
+  - elementId: v-play
+    elementType: icon
+    bounds: [468, 230, 34, 34]
+    iconName: "fas:play"
+    fill: {type: solid, color: "$primary"}
+  - elementId: v-title
+    elementType: text
+    bounds: [200, 316, 560, 34]
+    content:
+      fontSize: 24
+      bold: true
+      color: "$text"
+      fontFamily: 思源宋体
+      align: [center, middle]
+      wrap: false
+      text: 《清单》 · THE LIST
+  # 链接占位
+  - elementId: v-link
+    elementType: text
+    bounds: [230, 424, 500, 26]
+    content:
+      fontSize: 17
+      color: "$lavender"
+      align: [center, middle]
+      wrap: false
+      text: |
+        <p><a href="https://REPLACE-WITH-VIDEO-URL">▶ 点击打开成片链接（放映前替换为 B 站 / 官网地址）</a></p>
+  - elementId: v-hint
+    elementType: text
+    bounds: [230, 458, 500, 16]
+    content:
+      fontSize: 11
+      color: "$faint"
+      align: [center, top]
+      wrap: false
+      text: 片长 3′33″ · 建议同时准备本地 MP4 文件双备份
+  - elementId: v-corner-tl
+    elementType: shape
+    bounds: [200, 92, 24, 3]
+    shapeName: rect
+    fill: {type: solid, color: "$primary"}
+  - elementId: v-corner-tl2
+    elementType: shape
+    bounds: [200, 92, 3, 24]
+    shapeName: rect
+    fill: {type: solid, color: "$primary"}
+  - elementId: v-corner-br
+    elementType: shape
+    bounds: [736, 404, 24, 3]
+    shapeName: rect
+    fill: {type: solid, color: "$primary"}
+  - elementId: v-corner-br2
+    elementType: shape
+    bounds: [757, 383, 3, 24]
+    shapeName: rect
+    fill: {type: solid, color: "$primary"}

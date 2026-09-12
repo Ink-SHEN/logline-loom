@@ -1,0 +1,57 @@
+version: v2
+title: 电影 Agent LOOM 与短片《清单》· 结题答辩
+size: [960, 540]
+customFonts:
+  - family: 思源宋体
+    src: "https://statics.kimi.ai/neo-design-static/p-font/思源宋体.ttf"
+theme:
+  colors:
+    bg: "#0C0913"
+    bgSoft: "#171126"
+    primary: "#624AFF"
+    lavender: "#B9ACFF"
+    line: "#332B4D"
+    text: "#F4F2FB"
+    sub: "#A49DC4"
+    faint: "#6B6488"
+  textStyles:
+    header:
+      fontSize: 32
+      bold: true
+      color: "$text"
+    kicker:
+      fontSize: 11
+      color: "$faint"
+      letterSpacing: 4
+    body:
+      fontSize: 15
+      color: "$sub"
+      lineHeight: 1.8
+    pagemeta:
+      fontSize: 10
+      color: "$faint"
+      letterSpacing: 2
+  tableStyles:
+    crew:
+      cellStyle:
+        fontSize: 14
+        color: "$text"
+        align: [left, middle]
+        lineHeight: 1.5
+        border: [null, null, {style: solid, width: 1, color: "$line"}, null]
+      firstRowStyle:
+        fontSize: 11
+        color: "$faint"
+        letterSpacing: 2
+pages:
+  - pages/01_cover.page
+  - pages/02_video.page
+  - pages/03_transition.page
+  - pages/04_philosophy.page
+  - pages/05_pipeline.page
+  - pages/06_details.page
+  - pages/07_why.page
+  - pages/08_story.page
+  - pages/09_formodel.page
+  - pages/10_crew.page
+  - pages/11_closing.page

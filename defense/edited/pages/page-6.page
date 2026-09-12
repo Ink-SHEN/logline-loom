@@ -1,0 +1,138 @@
+pageType: content
+background:
+  type: solid
+  color: "#0C0913"
+notes: 5:30–5:45 两个刻意的设计：左边讲人机边界由机器执行，右边讲全链路可反查。各一句话即可。
+elements:
+  - elementId: d-kicker
+    elementType: text
+    bounds: [60, 40, 300, 16]
+    content:
+      text: |-
+        <p>DESIGN DETAILS</p>
+      wrap: false
+      style: $text2
+  - elementId: d-pageno
+    elementType: text
+    bounds: [860, 40, 40, 16]
+    content:
+      text: |-
+        <p style="text-align: right;">07</p>
+      wrap: false
+      align:
+        - right
+        - top
+      style: $text1
+  - elementId: d-title
+    elementType: text
+    bounds: [60, 62, 500, 44]
+    content:
+      text: |-
+        <p>两个刻意的设计</p>
+      wrap: false
+      style: $text3
+  - elementId: d-divider
+    elementType: shape
+    bounds: [479, 150, 1, 330]
+    shapeName: rect
+    fill:
+      type: solid
+      color: "#332B4D"
+  - elementId: d-l-num
+    elementType: text
+    bounds: [60, 150, 60, 44]
+    content:
+      text: |-
+        <p>①</p>
+      color: "#624AFF"
+      fontSize: 34
+      bold: true
+      fontFamily: MiSans, MiSans
+      wrap: false
+  - elementId: d-l-h
+    elementType: text
+    bounds: [60, 208, 380, 30]
+    content:
+      text: |-
+        <p>人工关口是数据，不是约定</p>
+      color: "#F4F2FB"
+      fontSize: 21
+      bold: true
+      fontFamily: MiSans, MiSans
+      wrap: false
+  - elementId: d-l-body
+    elementType: text
+    bounds: [60, 252, 380, 100]
+    content:
+      text: |-
+        <p style="line-height: 1.8;">全片仅两处强制关口：剧本确认、粗剪确认。关口未批准时，校验器直接判不通过，下游 Agent 拿不到放行的产物——人机边界由机器执行。</p>
+      color: "#A49DC4"
+      fontSize: 14
+      fontFamily: MiSans, MiSans
+      lineHeight: 1.8
+      wrap: true
+  - elementId: d-l-code
+    elementType: text
+    bounds: [60, 372, 380, 20]
+    content:
+      text: |-
+        <p>gate.required = true ∧ status ≠ approved → REJECT</p>
+      color: "#B9ACFF"
+      fontSize: 12
+      fontFamily: MiSans, MiSans
+      wrap: false
+  - elementId: d-r-num
+    elementType: text
+    bounds: [520, 150, 60, 44]
+    content:
+      text: |-
+        <p>②</p>
+      color: "#624AFF"
+      fontSize: 34
+      bold: true
+      fontFamily: MiSans, MiSans
+      wrap: false
+  - elementId: d-r-h
+    elementType: text
+    bounds: [520, 208, 380, 30]
+    content:
+      text: |-
+        <p>全链路可反查</p>
+      color: "#F4F2FB"
+      fontSize: 21
+      bold: true
+      fontFamily: MiSans, MiSans
+      wrap: false
+  - elementId: d-r-body
+    elementType: text
+    bounds: [520, 252, 380, 76]
+    content:
+      text: |-
+        <p style="line-height: 1.8;">每份产物都携带参数快照与 upstream_refs。成片里的任何一个镜头，都能沿契约链反查回源头——完整的制作档案。</p>
+      color: "#A49DC4"
+      fontSize: 14
+      fontFamily: MiSans, MiSans
+      lineHeight: 1.8
+      wrap: true
+  - elementId: d-r-chain
+    elementType: text
+    bounds: [520, 352, 380, 60]
+    content:
+      text: |-
+        <p style="line-height: 1.9;">镜头 → c05 产物 → c04 提示词（含种子）</p><p style="line-height: 1.9;">→ c03 分镜 → c02 剧本 → c01 片约</p>
+      color: "#B9ACFF"
+      fontSize: 12
+      fontFamily: MiSans, MiSans
+      lineHeight: 1.9
+      wrap: true
+  - elementId: d-bottom
+    elementType: text
+    bounds: [60, 496, 840, 16]
+    content:
+      text: |-
+        <p style="text-align: center;">7 道契约 · 8 种典型错误实测 8/8 被校验器抓住</p>
+      wrap: false
+      align:
+        - center
+        - top
+      style: $text1

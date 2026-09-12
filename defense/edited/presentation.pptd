@@ -1,0 +1,96 @@
+version: v2
+title: 电影 Agent LOOM 与短片《清单》· 结题答辩
+theme:
+  colors:
+    dk1: "#000000"
+    lt1: "#FFFFFF"
+    dk2: "#1F2937"
+    lt2: "#F3F4F6"
+    accent1: "#4472C4"
+    accent2: "#ED7D31"
+    accent3: "#A5A5A5"
+    accent4: "#FFC000"
+    accent5: "#5B9BD5"
+    accent6: "#70AD47"
+    hlink: "#0563C1"
+    folHlink: "#954F72"
+  textStyles:
+    text1:
+      color: "#6B6488"
+      fontSize: 10
+      fontFamily: MiSans, MiSans
+      letterSpacing: 2
+    text2:
+      color: "#6B6488"
+      fontSize: 11
+      fontFamily: MiSans, MiSans
+      letterSpacing: 4
+    text3:
+      color: "#F4F2FB"
+      fontSize: 32
+      fontFamily: MiSans, MiSans
+      bold: true
+    text4:
+      color: "#624AFF"
+      fontSize: 30
+      fontFamily: MiSans, MiSans
+      bold: true
+    text5:
+      color: "#F4F2FB"
+      fontSize: 22
+      fontFamily: MiSans, MiSans
+      bold: true
+    text6:
+      color: "#A49DC4"
+      fontSize: 14
+      fontFamily: MiSans, MiSans
+    text7:
+      color: "#F4F2FB"
+      fontSize: 17
+      fontFamily: MiSans, MiSans
+      bold: true
+    text8:
+      color: "#F4F2FB"
+      fontSize: 18
+      fontFamily: MiSans, MiSans
+      bold: true
+    text9:
+      color: "#A49DC4"
+      fontSize: 13
+      fontFamily: MiSans, MiSans
+      lineHeight: 1.6
+    text10:
+      color: $dk1
+      fontFamily: MiSans, MiSans
+  tableStyles:
+    table1:
+      cellStyle:
+        lineHeight: 1.5
+        border:
+          - null
+          - null
+          - style: solid
+            width: 1
+            color: "#332B4D"
+          - null
+        align:
+          - left
+          - middle
+      firstRowStyle:
+        color: "#6B6488"
+        fontSize: 11
+        letterSpacing: 2
+size: [960, 540]
+pages:
+  - pages/page-1.page
+  - pages/page-toc.page
+  - pages/page-2.page
+  - pages/page-3.page
+  - pages/page-4.page
+  - pages/page-5.page
+  - pages/page-6.page
+  - pages/page-7.page
+  - pages/page-8.page
+  - pages/page-9.page
+  - pages/page-10.page
+  - pages/page-11.page

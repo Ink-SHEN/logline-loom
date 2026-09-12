@@ -1,0 +1,51 @@
+pageType: content
+background:
+  type: solid
+  color: "#624AFF"
+notes: 7:20–7:35 收尾：一句话让两个成果合流，念完停顿，致谢。预留 25 秒机动缓冲到 8:00。
+elements:
+  - elementId: f-kicker
+    elementType: text
+    bounds: [60, 56, 400, 16]
+    opacity: 0.6
+    content:
+      text: |-
+        <p>LOOM × THE LIST</p>
+      color: $lt1
+      fontSize: 11
+      fontFamily: MiSans, MiSans
+      letterSpacing: 4
+      wrap: false
+  - elementId: f-big
+    elementType: text
+    bounds: [60, 180, 840, 180]
+    content:
+      text: |-
+        <p style="text-align: left; line-height: 1.5;">机器负责生产，</p><p style="text-align: left; line-height: 1.5;">人负责「好」的定义。</p>
+      color: $lt1
+      fontSize: 52
+      bold: true
+      fontFamily: MiSans, MiSans
+      lineHeight: 1.5
+      wrap: true
+      align:
+        - left
+        - middle
+  - elementId: f-line
+    elementType: shape
+    bounds: [60, 396, 56, 4]
+    shapeName: rect
+    fill:
+      type: solid
+      color: $lt1
+  - elementId: f-sub
+    elementType: text
+    bounds: [60, 424, 700, 22]
+    opacity: 0.8
+    content:
+      text: |-
+        <p>电影 Agent LOOM 与短片《清单》 · 谢谢聆听，请各位评委指正</p>
+      color: $lt1
+      fontSize: 15
+      fontFamily: MiSans, MiSans
+      wrap: false
