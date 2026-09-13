@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 """创空间运行配置。
 
-所有敏感值都从环境变量读（创空间里配置成 secrets），不进仓库、不写默认值。
+LLM（①–④）的敏感值都从环境变量读（创空间里配置成 secrets），不进仓库、不写默认值。
 变量名与 agents/*/llm.js 保持一致，两端共用同一套配置语义。
+
+⑤ 生成接口的配置多一个来源：**界面运行时传入**（见下方 GenSettings）。
+优先级 界面传入 > 环境变量，使用者在浏览器里临时填一次就能把链路跑通。
 """
 import os
+import urllib.parse
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONTRACTS_DIR = os.path.join(ROOT, "contracts")
@@ -83,7 +87,88 @@ def llm_timeout() -> int:
 #
 # 创空间不内置、也不绑定任何具体的视频生成模型，也不依赖仓库外的私有节点。
 # ⑤ 站对外只有一层标准化接口（见 space/generate.py 头部契约）：
-# 把 ④ 产出的生成请求 POST 出去、把任务状态取回来。换模型 = 改环境变量。
+# 把 ④ 产出的生成请求 POST 出去、把任务状态取回来。
+#
+# 配置有两个来源，优先级：**界面运行时传入** > 环境变量（创空间 secrets）。
+# 2026-09-13 起支持使用者在自己的浏览器里临时填接口地址 / Key / 模型名，
+# 不改环境变量也能把整条链路跑通。
+
+
+class GenSettings(object):
+    """⑤ 生成接口的一份配置快照。
+
+    刻意做成**不可持久化的值对象**：使用者在界面里填的 Key 只活在这次请求里——
+    不落盘（tmp/space_runs 只记非敏感的端点标签）、不进日志。
+    __repr__ 会把 Key 掩掉，避免任何 %r / f-string 顺手把它打出去。
+    """
+
+    __slots__ = ("url", "key", "model", "backend", "timeout", "source")
+
+    def __init__(self, url="", key="", model="", backend=None, timeout=None, source="env"):
+        self.url = (url or "").strip().rstrip("/")
+        self.key = key or ""
+        self.model = (model or "").strip()
+        self.backend = (backend or gen_backend()).strip().lower()
+        self.timeout = float(timeout) if timeout else gen_timeout()
+        self.source = source
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.url)
+
+    def label(self) -> str:
+        """给界面/日志用的非敏感标签：只有主机名，不带路径、查询串与凭据。"""
+        if not self.url:
+            return ""
+        try:
+            return urllib.parse.urlsplit(self.url).netloc or self.url
+        except Exception:
+            return self.url
+
+    def masked(self) -> dict:
+        return {"url": self.url, "model": self.model, "backend": self.backend,
+                "timeout": self.timeout, "source": self.source,
+                "key": "***" if self.key else ""}
+
+    def __repr__(self):
+        return "<GenSettings %r>" % (self.masked(),)
+
+
+def gen_settings(overrides=None) -> "GenSettings":
+    """合并「界面运行时传入」与「环境变量」，返回一份 GenSettings。
+
+    overrides 形如 {"url":…, "key":…, "model":…, "backend":…, "timeout":…}；
+    空字符串一律视为「没填」，回落到环境变量。
+    """
+    o = overrides or {}
+    if isinstance(o, GenSettings):
+        return o
+    ui_url = str(o.get("url") or "").strip()
+    return GenSettings(
+        url=ui_url or gen_api_url(),
+        # 界面留空则回落环境变量：内网/公开端点的人可以把 Key 留空
+        key=(o.get("key") or gen_api_key()),
+        model=str(o.get("model") or "").strip() or gen_api_model(),
+        backend=str(o.get("backend") or "").strip() or None,
+        timeout=o.get("timeout") or None,
+        source="ui" if ui_url else "env",
+    )
+
+
+def gen_wait_seconds() -> int:
+    """⑤ 提交后愿意等待成片的秒数上限。0 = 只提交不等待（立刻返回任务 ID）。"""
+    try:
+        return max(0, int(float(os.environ.get("LOOM_GEN_WAIT_SECONDS") or 300)))
+    except ValueError:
+        return 300
+
+
+def gen_max_shots() -> int:
+    """⑤ 本次最多下发几个镜头。默认全下（8），上限防呆。"""
+    try:
+        return max(1, min(int(os.environ.get("LOOM_GEN_MAX_SHOTS") or 8), 24))
+    except ValueError:
+        return 8
 
 
 def gen_backend() -> str:
