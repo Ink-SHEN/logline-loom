@@ -58,6 +58,7 @@
 不能让人借它去探内网或云元数据端点；本地调试用 LOOM_GEN_ALLOW_PRIVATE=1 放行。
 """
 import ipaddress
+import itertools
 import json
 import os
 import socket
@@ -324,7 +325,10 @@ class ReplayBackend(GenerationBackend):
         items = clips(limit=1)
         if not items:
             raise RuntimeError("space/fallback/ 里没有可用素材")
-        return {"task_id": "replay-%s" % time.strftime("%Y%m%d-%H%M%S"),
+        # task_id 必须逐镜唯一：用秒级时间戳会在同一秒内撞车（实测 8 镜只出 2 个 ID），
+        # 任务表会互相覆盖。这里用「镜头分区 + 单调序号」保证唯一且可读。
+        tag = str(request.get("prefix") or "replay").replace("/", "-")
+        return {"task_id": "replay-%s-%03d" % (tag, next(_REPLAY_SEQ)),
                 "status": "succeeded", "video_url": "", "video_path": items[0],
                 "progress": 1.0, "replay": True, "detail": "参考回放（非模型生成）"}
 
@@ -334,6 +338,9 @@ class ReplayBackend(GenerationBackend):
 
 
 _BACKENDS = {"http": HttpModelAPI(), "replay": ReplayBackend()}
+
+# 参考回放的 task_id 序号（保证逐镜唯一，见 ReplayBackend.submit）
+_REPLAY_SEQ = itertools.count(1)
 
 
 def backends():

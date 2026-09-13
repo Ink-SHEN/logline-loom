@@ -195,10 +195,14 @@ def _gallery_for(snap):
       其余示例素材          → 「示例素材（非本次生成）」
     """
     snap = snap or {}
-    vids = list(snap.get("videos") or [])
+    # 同一路径去重：模型侧把同一段成片返回给多个镜头时，别在产物区重复列
+    vids, seen = [], set()
+    for p in snap.get("videos") or []:
+        if p not in seen:
+            seen.add(p)
+            vids.append(p)
     tag = "参考回放（非模型生成）· " if snap.get("replay") else "★ 本次生成 · "
     items = [(p, tag + os.path.basename(p)) for p in vids]
-    seen = set(vids)
     rest = [p for p in generate.clips(limit=6) if p not in seen]
     items += [(p, "示例素材（非本次生成）· " + os.path.basename(p))
               for p in rest[:3 if items else 6]]
