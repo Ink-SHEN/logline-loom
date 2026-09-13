@@ -142,9 +142,16 @@ def interface_markdown():
 | `LOOM_GEN_BACKEND` | `http`（默认）/ `replay`（内置参考回放） |
 | `LOOM_GEN_TIMEOUT` | 单次 HTTP 超时秒数，默认 30 |
 | `LOOM_GEN_WAIT_SECONDS` | ⑤ 等待成片的秒数上限，默认 300（`0` = 只提交不等待） |
-| `LOOM_GEN_MAX_SHOTS` | 本次最多下发几个镜头，默认 8 |
+| `LOOM_GEN_MAX_SHOTS` | ④ 最多为几个镜头产生成请求（= ⑤ 最多下发几个），默认 8 |
 
 界面上填的值**优先于**环境变量。
+
+> **运行时长是有上界的。** ④ 逐镜各调一次 LLM，单次最坏 `(1+LOOM_LLM_FIX_ROUNDS)` 轮 ×
+> `(1+重试)` 次 × `LOOM_LLM_TIMEOUT_MS`，8 镜叠起来会是小时级；所以整条 ①→④ 受
+> `LOOM_RUN_BUDGET_SECONDS`（默认 1200 秒）约束：④ 在**开始每一镜之前**检查剩余预算，
+> 到点就不再开新的镜头，每次调用的超时也取 `min(单次上限, 剩余预算)`。
+> 默认值下（正常一整片 3–5 分钟）**这两条线都碰不到**；万一碰到，界面会如实写出
+> 「哪几个镜头超出预算未生成」，**不会静默丢弃，也不会拿示例素材冒充本次生成**。
 
 > 地址只允许公网 `http/https`：创空间是公开服务，不能借它去探内网或云元数据端点（SSRF）。
 > 本地调试跑在 `127.0.0.1` 时，设 `LOOM_GEN_ALLOW_PRIVATE=1` 放行。
@@ -831,7 +838,10 @@ def run_all_iter(gen_items, settings=None, aspect_ratio="", prefix_base="loom",
                 secs = 5.0
         shots.append({"shot_id": it.get("shot_id") or "?", "prompt": p,
                       "seconds": secs, "status": "pending", "task_id": "",
-                      "video_path": "", "detail": "", "error": ""})
+                      "video_path": "", "detail": "", "error": "",
+                      # ④ 这一镜的说明（例如「超出运行预算未生成」）原样带下来，
+                      # 这样跳过时能给出准确原因，而不是笼统一句「没取到 prompt」
+                      "source_note": it.get("note") or ""})
 
     state = {"phase": "preparing", "i": 0, "shots": shots,
              "backend": b.slug, "backend_title": b.title,
@@ -865,7 +875,8 @@ def run_all_iter(gen_items, settings=None, aspect_ratio="", prefix_base="loom",
         state["phase"] = "submitting"
         if not sh["prompt"]:
             sh.update({"status": "skipped",
-                       "error": "④ 的 c04 里没取到 payload.generation.prompt"})
+                       "error": sh.get("source_note")
+                                or "④ 的 c04 里没取到 payload.generation.prompt"})
             state.update(_tally(shots))
             yield _snapshot(state)
             continue

@@ -281,8 +281,41 @@ def _inject_node_ids(doc):
     return doc
 
 
-def call_agent(slug, upstream_doc, user_message, offline=False):
-    """跑一个 LLM Agent。返回 (产物, 说明, 是否降级)。"""
+def _remaining(deadline):
+    """距本次运行截止还剩几秒。deadline 为 None 时返回 None（=不设限）。"""
+    if deadline is None:
+        return None
+    return deadline - time.monotonic()
+
+
+def _budget_timeout(deadline):
+    """本次 LLM 调用可用的超时秒数：`min(单次上限, 剩余预算)`。
+
+    正常情况（剩余预算远大于 llm_timeout）取到的就是 `llm_timeout()`，
+    **与加预算之前完全一致**；只有预算快耗尽时才会收缩——而那时原本的行为是
+    无限期挂住，收缩成「早点失败并如实降级」是明确更好的选择。
+    """
+    base = config.llm_timeout()
+    left = _remaining(deadline)
+    if left is None:
+        return base
+    return max(5, int(min(base, left)))
+
+
+def _budget_exhausted(deadline):
+    """预算是否已经用完（用完就别再开始新的调用了）。"""
+    left = _remaining(deadline)
+    return left is not None and left <= 0
+
+
+def call_agent(slug, upstream_doc, user_message, offline=False, deadline=None):
+    """跑一个 LLM Agent。返回 (产物, 说明, 是否降级)。
+
+    `deadline`（可选，`time.monotonic()` 基准）给这一站一个时间上界：
+    每次 `llm.chat` 的超时取 `min(llm_timeout, 剩余预算)`，预算耗尽就直接
+    降级为示例产物并**写明是预算用尽**，不会静默、也不会假装成功。
+    不传 deadline 时行为与之前一字不差。
+    """
     spec = dict(AGENTS[slug])
     spec["_slug"] = slug
     stamp = _stamp()
@@ -291,6 +324,13 @@ def call_agent(slug, upstream_doc, user_message, offline=False):
     if offline or not config.llm_api_key():
         doc = _fallback(slug, upstream_id, "未配置 LLM API Key" if not offline else "按离线模式要求不调用 LLM")
         return doc, "已降级为示例产物（形状合规，内容与本次 logline 无关）", True
+
+    if _budget_exhausted(deadline):
+        doc = _fallback(slug, upstream_id,
+                        "超出本次运行预算（%d 秒），该站未调用 LLM" % config.run_budget_seconds())
+        return (doc,
+                "超出本次运行预算（%d 秒），已降级为示例产物：该站未调用 LLM" % config.run_budget_seconds(),
+                True)
 
     system = prompts.load_prompt(slug)
     # 按站取模型：允许创意环节（编剧）上更强的大模型，结构化环节走快的。
@@ -308,7 +348,7 @@ def call_agent(slug, upstream_doc, user_message, offline=False):
         # 一轮不够（实测 c04 只有 1/3 一次过），放到 3 轮——这本身就是
         # 「反馈闭环、重试和可观测性 6%」要展示的东西，重试次数也如实写进 notes。
         fix_rounds = config.llm_fix_rounds()
-        text = llm.chat(messages, model=model)
+        text = llm.chat(messages, model=model, timeout=_budget_timeout(deadline))
         for attempt in range(fix_rounds + 1):
             doc = _normalize(
                 llm.extract_json(text), spec, upstream_id,
@@ -327,7 +367,7 @@ def call_agent(slug, upstream_doc, user_message, offline=False):
                     "请逐条修正后重新输出完整的 JSON（仍只输出一个 JSON 代码块，不要省略字段）。"
                     % "\n- ".join(problems[:12])},
             ]
-            text = llm.chat(messages, model=model)
+            text = llm.chat(messages, model=model, timeout=_budget_timeout(deadline))
     except Exception as e:
         doc = _fallback(slug, upstream_id, "LLM 调用失败：%s" % e)
         return doc, "LLM 调用失败，已降级为示例产物：%s" % e, True
@@ -350,7 +390,7 @@ def _fallback(slug, upstream_id, reason):
 
 
 
-def build_all_gen_requests(shotlist_doc, offline=False):
+def build_all_gen_requests(shotlist_doc, offline=False, deadline=None, max_shots=None):
     """④ 逐镜头产出 c04 生成请求（每镜一份，交给 ⑤ 生成接口逐个下发）。
 
     返回 (列表, 说明, 是否有降级)。列表元素形如：
@@ -362,19 +402,39 @@ def build_all_gen_requests(shotlist_doc, offline=False):
     本轮聚焦 T2V：即使某镜头 c03 标了 I2V/R2V，也要求提示词 Agent 按 T2V 输出
     （当前生成接口按文生视频收敛；非 T2V 镜头降级为文生，assets 留空）。
     每个镜头独立调一次 prompt_writer（④ Agent），保证各自过契约校验。
-    """
-    shots = ((shotlist_doc.get("payload") or {}).get("shots")) or []
-    out, notes, degraded_any = [], [], False
 
-    for shot in shots:
-        if not isinstance(shot, dict):
-            continue
+    耗时上界靠两个可选参数保证（**都不传时行为与加预算之前一字不差**）：
+      max_shots  最多为几个镜头产请求；默认 `config.gen_max_shots()`（8，而 ③ 只要
+                 6–8 个镜头，所以默认等于不设限）。超出的镜头会如实报进 notes。
+      deadline   本次运行的截止时刻（`time.monotonic()` 基准）。到点后**不再开始新的
+                 镜头**：剩余镜头保留占位、`gen` 留空（⑤ 会如实标 skipped），
+                 notes 里写明是预算用尽——不静默丢弃，也不拿示例素材冒充。
+    """
+    listed = [s for s in (((shotlist_doc.get("payload") or {}).get("shots")) or [])
+              if isinstance(s, dict)]
+    limit = max_shots if max_shots else config.gen_max_shots()
+    kept, dropped = listed[:limit], listed[limit:]
+
+    out, notes, degraded_any = [], [], False
+    skipped_by_budget = []
+
+    for shot in kept:
         sid = shot.get("shot_id") or shot.get("order") or "?"
         wtype = (shot.get("workflow_type") or "T2V").upper()
         if wtype not in ("T2V", "I2V", "R2V"):
             wtype = "T2V"
         if wtype != "T2V":
             degraded_any = True
+
+        # 预算检查放在「开始这一镜之前」：发出去的那次调用不拦腰截断，
+        # 只是不再开新的——这样既拿到硬时间上界，又不会把一次正常调用切坏。
+        if _budget_exhausted(deadline):
+            skipped_by_budget.append(sid)
+            out.append({"shot_id": sid, "workflow_type": "T2V", "gen": {}, "c04": None,
+                        "note": "⏱ 超出本次运行预算（%d 秒），未生成"
+                                % config.run_budget_seconds()})
+            continue
+
         user_msg = (
             "镜头清单（c03_shotlist，artifact_id=%s）：\n%s\n\n"
             "请为镜头 **%s** 生成生成请求：英文提示词 + 时间码 + 节点 ID 映射。\n"
@@ -384,7 +444,8 @@ def build_all_gen_requests(shotlist_doc, offline=False):
             % (shotlist_doc["envelope"]["artifact_id"],
                json.dumps(shotlist_doc["payload"], ensure_ascii=False, indent=2),
                sid, wtype))
-        req, note, degraded = call_agent("prompt_writer", shotlist_doc, user_msg, offline=offline)
+        req, note, degraded = call_agent("prompt_writer", shotlist_doc, user_msg,
+                                        offline=offline, deadline=deadline)
         gen = ((req.get("payload") or {}).get("generation")) or {}
         out.append({"shot_id": sid, "workflow_type": "T2V",
                     "gen": gen, "c04": req, "note": note})
@@ -392,7 +453,18 @@ def build_all_gen_requests(shotlist_doc, offline=False):
         if degraded:
             degraded_any = True
 
-    summary = "已为 %d 个镜头生成生成请求（按 T2V 整片计划）" % len(out)
+    # 说明里把「为什么不是全部镜头」逐条写清楚，界面与 ⑦ 总表直接用这句话
+    reasons = []
     if degraded_any:
-        summary += "（含非 T2V 镜头降级为 T2V，或个别降级为示例产物）"
-    return out, summary, degraded_any
+        reasons.append("含非 T2V 镜头降级为 T2V，或个别降级为示例产物")
+    if skipped_by_budget:
+        reasons.append("%d 个镜头（%s）超出 %d 秒运行预算、未生成"
+                       % (len(skipped_by_budget), "、".join(skipped_by_budget[:6]),
+                          config.run_budget_seconds()))
+    if dropped:
+        reasons.append("%d 个镜头超出镜头上限 %d、未产出" % (len(dropped), limit))
+
+    summary = "已为 %d 个镜头生成生成请求（按 T2V 整片计划）" % len(out)
+    if reasons:
+        summary += "（%s）" % "；".join(reasons)
+    return out, summary, degraded_any or bool(skipped_by_budget) or bool(dropped)

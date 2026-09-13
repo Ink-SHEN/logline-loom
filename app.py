@@ -13,6 +13,7 @@ Agent 的人格（system prompt）运行时从 agents/*/prompt.js 读——三�
 import json
 import os
 import random
+import time
 
 import gradio as gr
 
@@ -222,6 +223,11 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, requested
     所有 yield 一律走 emit()，避免漏改某一个导致解包报错。
     """
     wait_seconds = int(gen_wait or 0)
+    # 整条 ①→④ 的**墙上时间预算**（见 config.run_budget_seconds 的说明）。
+    # ④ 是逐镜各调一次 LLM，单镜最坏 (1+3) 轮 × (1+2) 次 × 300s，8 镜叠起来是小时级；
+    # 默认 20 分钟，而正常一整片 3–5 分钟 —— 默认配置下这条线**永远碰不到**，
+    # 它只在「上游病态慢、原本会无限期挂住」时才生效，且到点后的处理是**明说**而非静默。
+    deadline = time.monotonic() + config.run_budget_seconds()
     def emit(text, states, brief=None, screenplay=None, shotlist=None, genreq=None, gallery=None):
         return (text, brief, screenplay, shotlist, genreq, gallery, theme.progress_html(states))
 
@@ -254,7 +260,7 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, requested
         "请把它展开成完整剧本，**3–5 个场景**（太少撑不起叙事，太多后续生成不切实际），"
         "按契约只输出一个 JSON 代码块。"
         % (brief["envelope"]["artifact_id"], json.dumps(brief["payload"], ensure_ascii=False, indent=2)),
-        offline=offline)
+        offline=offline, deadline=deadline)
     logs[-1] = "**② 编剧 Agent**：%s" % note
 
     gate_note = ""
@@ -280,7 +286,7 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, requested
         "画幅锁定 %s。请把它拆成镜头清单，**6–8 个镜头**（每个镜头都要产出一份独立的生成请求），"
         "按契约只输出一个 JSON 代码块。"
         % (screenplay["envelope"]["artifact_id"], json.dumps(screenplay["payload"], ensure_ascii=False, indent=2), aspect),
-        offline=offline)
+        offline=offline, deadline=deadline)
     logs[-1] = "**③ 分镜 Agent**：%s" % note
     yield emit("\n\n".join(logs), _st(done=3), brief=brief, screenplay=screenplay, shotlist=shotlist)
 
@@ -288,8 +294,10 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, requested
     shots_n = len(((shotlist.get("payload") or {}).get("shots")) or [])
     logs.append("**④ 提示词 Agent**：正在为每个镜头写英文提示词…（%d 个镜头逐个生成）" % shots_n)
     yield emit("\n\n".join(logs), _st(done=3, running=4), brief=brief, screenplay=screenplay, shotlist=shotlist)
-    gen_items, gen_note, gen_degraded = pipeline.build_all_gen_requests(shotlist, offline=offline)
-    genreq_first = gen_items[0]["c04"] if gen_items else None
+    gen_items, gen_note, gen_degraded = pipeline.build_all_gen_requests(
+        shotlist, offline=offline, deadline=deadline)
+    # 取第一份**真的产出了**的 c04 给界面展示（预算耗尽时首镜可能只是占位）
+    genreq_first = next((it["c04"] for it in gen_items if it.get("c04")), None)
     logs[-1] = "**④ 提示词 Agent**：%s" % gen_note
     yield emit("\n\n".join(logs), _st(done=4), brief=brief, screenplay=screenplay, shotlist=shotlist, genreq=genreq_first)
 
