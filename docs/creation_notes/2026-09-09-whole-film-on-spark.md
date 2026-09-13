@@ -1,5 +1,8 @@
 # 创作手记 · 09-09（Day 5）整片生成线：创空间只编排、Spark 常驻生成——评审期自愈 + loom_batch 整片调度器 + c01「特定镜头设计」+ 首镜即时/整片下发 UI + 双端使用指南
 
+> ⚠️ 后续变更：本文所述 **natapp 隧道已于 09-13 换成 cloudflared**（根因与收口见
+> `2026-09-13-tunnel-switch.md`）。文中所有 `natapp` 字样均为当日实况，保留不改。
+
 > 衔接 Day 4 的「创空间部署」（app.py + space/ 包入库 6c0ce27、隧道/鉴权代理 b171a2d）与 09-08 空间部署决策记录。09-13 提交与 09.15–09.18 评审期临近，创空间「只能生成第一镜、且容器会休眠」的问题必须解决，本段把生成调度搬到常驻的 Spark，并按设计稿分 4 次提交逐步落地（2e6759d → c301fbd → 8d41218 → 0dba399 → 9f129a2 + 未提交的本地指南）。
 > 范围：Spark 侧自愈三件套与链路脚本（install_autostart/loom_health/loom_up/loom_status）、整片调度器 `spark/loom_batch.py`（新，389 行）、代理 `/batch/*` 分流、c01 契约可选字段 `requested_shots`（含编剧规则 8）、创空间侧逐镜 c04 + 首镜即时 + 整片下发（space/pipeline.py、space/generate.py、app.py）、设计稿与两份使用指南。
 
