@@ -300,6 +300,11 @@ class HttpModelAPI(GenerationBackend):
         s = _resolve(settings)
         if not s.configured:
             raise RuntimeError("未配置生成接口地址：⑤ 站接口已就绪，但还没有接入模型")
+        # 与 submit 同一道校验：query 也会对外发请求，漏了它就是一个可被利用的 SSRF 通道
+        # （错误信息会把内网服务的响应带回界面）。实测线上确实能打到 127.0.0.1。
+        ok, why = check_endpoint(s.url)
+        if not ok:
+            raise RuntimeError(why)
         endpoint = "%s/generations/%s" % (s.url, urllib.parse.quote(str(task_id), safe=""))
         data = _http_json(endpoint, headers=self._headers(s), timeout=s.timeout)
         return _normalize_task(data, fallback_id=task_id)
@@ -364,6 +369,19 @@ def status_lines(settings=None):
     label = {True: "已接入", False: "未接入"}[bool(ok)]
     extra = "" if b.slug == "http" else "（后端：%s）" % b.title
     return "⑤ 生成接口 · %s —— %s%s" % (label, detail, extra)
+
+
+def _unavailable_note(b, s, detail):
+    """接口不可用时该说什么 —— **填错了**和**没填**必须分开说。
+
+    否则使用者填了个内网地址，界面却回他「等待接入模型」，
+    把「你的地址有问题」误报成「还没接模型」，等于在骗人（实测踩过）。
+    """
+    if b.slug == "http" and s.configured:
+        return ("**⑤ 生成站无法下发：你把生成接口地址填上了，但它不可用。**\n\n"
+                "%s\n\n改掉「⑤ 生成接口」页签顶部面板里的地址后重跑；"
+                "把那栏清空则会回到「等待接入模型」。" % detail)
+    return NOT_CONNECTED_NOTE
 
 
 def probe(settings=None):
@@ -710,7 +728,7 @@ def run_c05(gen_request, offline=False, seed=None, aspect_ratio="", prefix="loom
         return base
 
     if not ok:
-        base.update({"mode": "not_connected", "note": NOT_CONNECTED_NOTE})
+        base.update({"mode": "not_connected", "note": _unavailable_note(b, s, detail)})
         return base
 
     prompt, seconds = prompt_from_c04(gen_request)
@@ -831,7 +849,8 @@ def run_all_iter(gen_items, settings=None, aspect_ratio="", prefix_base="loom",
         return
 
     if not ok:
-        state.update({"phase": "done", "note": NOT_CONNECTED_NOTE})
+        state.update({"phase": "done",
+                      "note": _unavailable_note(b, s, detail)})
         yield _snapshot(state)
         return
 
