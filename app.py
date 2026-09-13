@@ -5,6 +5,9 @@
 它只是界面壳：真正的编排在 space/pipeline.py，契约校验复用 contracts/，
 Agent 的人格（system prompt）运行时从 agents/*/prompt.js 读——三处都只有一份。
 
+⑤ 生成站：创空间**不内置视频生成模型**，它是一层可插拔的模型 API 接口
+（契约见 space/generate.py 头部）。界面会把这一点直接写出来。
+
 用法（本地）：  pip install -r requirements.txt && python app.py
 """
 import json
@@ -13,7 +16,7 @@ import random
 
 import gradio as gr
 
-from space import config, generate, pipeline, prompts, theme, tunnel, validate
+from space import config, generate, pipeline, theme, validate
 
 TITLE = "LOOM · 一句话生成 AI 短片的电影 Agent"
 INTRO = """
@@ -21,69 +24,35 @@ INTRO = """
 
 LOOM = **L**ogline-**O**riented **O**rchestration **M**achine。7 个 Agent 之间只通过**版本化的 JSON 契约**交接，
 每一步的产物都留在界面上可查、可反查，并且**每一步都要过 contracts/ 里那份权威校验器**。
+
+> ### ⑤ 生成站是一层可插拔的模型 API 接口
+> 本创空间**不内置、也不绑定任何具体的视频生成模型**。①–④ 站把一句话拆成**逐镜头的标准化生成请求**（英文提示词 + 时长 + 画幅），
+> ⑤ 站对外只暴露**一个模型 API 接口**：把请求发出去、把成片取回来。
+> 接入任意满足该契约的生成服务只需配 3 个环境变量，**Agent 代码一行都不用改**；当前状态与完整契约见 **「⑤ 生成接口」** 标签页。
 """
 
 
 def self_check():
     lines = []
     ok, problems = _selftest()
-    lines.append("- 契约自检（`--selftest`，7 份示例）：%s" % ("**7/7 通过**" if ok else "不通过：%s" % "; ".join(problems[:3])))
-    lines.append("- LLM：%s（模型 `%s`）" % ("已配置" if config.llm_api_key() else "**未配置** LOOM_LLM_API_KEY", config.llm_model()))
-    reachable, detail = generate.probe_live()
-    lines.append("- 真生成后端（方案 A）：%s —— %s" % ("已连通" if reachable else "未连通，将走回放", detail))
-    lines.append("- 回放素材（方案 B）：%d 段" % len(generate.replay_shots()))
+    lines.append("- 契约自检（`--selftest`，7 份示例）：%s"
+                 % ("**7/7 通过**" if ok else "不通过：%s" % "; ".join(problems[:3])))
+    lines.append("- LLM：%s（模型 `%s`）"
+                 % ("已配置" if config.llm_api_key() else "**未配置** LOOM_LLM_API_KEY",
+                    config.llm_model()))
+    lines.append("- " + generate.status_lines())
+    lines.append("- 示例素材：%d 段（`space/fallback/`，仅作产物形态预览，不代表有模型在跑）"
+                 % len(generate.clips()))
     return "\n".join(lines)
 
 
-def tunnel_status(force=False):
-    """隧道地址状态。force=True 会重新探一遍所有候选地址。"""
-    if force:
-        tunnel.current(force=True)
-    return tunnel.status_lines()
-
-
-def tunnel_report(url, token):
-    """收下 Spark 上报的隧道地址。
-
-    为什么做成 Gradio 函数而不是普通 HTTP 路由：魔搭的网关只放行 /gradio_api/*，
-    自定义 FastAPI 路由从外面调不到（实测 404/405）。所以借 Gradio 自己的 API 通道，
-    用 api_name="report_tunnel" 暴露成 /gradio_api/run/report_tunnel。
-    """
-    ok, msg = tunnel.save_reported(url, token)
-    return ("✅ %s" if ok else "⛔ %s") % msg
-
-
-def _mount_tunnel_api(demo):
-    """挂两个 HTTP 端点，让 Spark 能把「当前隧道地址」主动报过来。
-
-    natapp 免费隧道的域名可能变。变的时候如果只能靠人去改 secrets，
-    评审那几天就是个定时炸弹——所以让 Spark 自己把新地址送上门。
-    鉴权用和代理同一个 token：token 对不上，谁也别想把我指到别的机器上。
-    """
-    app = getattr(demo, "app", None) or getattr(demo, "fastapi", None)
-    if app is None:
-        return False
-    try:
-        from fastapi import Request
-        from fastapi.responses import JSONResponse
-    except Exception:
-        return False
-
-    @app.post("/loom/tunnel/report")
-    async def _report(req: Request):
-        try:
-            body = await req.json()
-        except Exception:
-            return JSONResponse({"ok": False, "error": "请求体不是 JSON"}, status_code=400)
-        ok, msg = tunnel.save_reported(body.get("url", ""), body.get("token", ""))
-        return JSONResponse({"ok": ok, "detail": msg}, status_code=200 if ok else 403)
-
-    @app.post("/loom/tunnel/current")
-    async def _current():
-        url, detail = tunnel.current(force=True)
-        return {"url": url, "detail": detail, "candidates": [u for u, _ in tunnel.candidates()]}
-
-    return True
+def gen_interface_status():
+    """⑤ 生成接口的当前状态（界面用，永远说真话）。"""
+    b = generate.active()
+    ok, detail = b.available()
+    return ("**当前后端**：%s —— %s\n\n%s\n\n> 状态取值：**已接入** = 配好模型服务，⑤ 站会真提交；"
+            "**未接入** = 接口已就绪但没有模型，④ 的生成请求会照常产出，⑤ 站如实显示「等待接入模型」。"
+            % (b.title, detail, b.describe()))
 
 
 def _selftest():
@@ -106,7 +75,7 @@ def _st(done=0, running=None, blocked=None):
     """构造七站进度状态列表。
 
     前 done 站标 done；running / blocked 用站序号（1–7）指定；
-    ⑥质检 ⑦剪辑 恒为 local——它们跑在本地节点上，创空间里永远不点亮。
+    ⑥质检 ⑦剪辑 恒为 local——它们跑在创空间之外的本地节点上，这里永远不点亮。
     """
     s = ["pending"] * 7
     for i in range(min(done, 5)):
@@ -124,7 +93,7 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, requested
     """主流程。逐段 yield，界面上能看到 Agent 一个个往下走。
 
     输出共 7 个：[status, c01, c02, c03, c04, gallery, progress]。
-    第 7 个（七站进度条）是后加的，刻意**追加在末尾**——这样前 6 个的索引不变，
+    第 7 个（七站进度条）刻意**追加在末尾**——这样前 6 个的索引不变，
     外部按位置取值的调用方（含线上验证脚本 /gradio_api/call/run_pipeline）不受影响。
     所有 yield 一律走 emit()，避免漏改某一个导致解包报错。
     """
@@ -183,131 +152,61 @@ def run_pipeline(logline, duration, aspect, visual_style, audio_style, requested
     shotlist, note, _ = pipeline.call_agent(
         "storyboard", screenplay,
         "剧本（c02_screenplay，artifact_id=%s，剧本确认关口已批准）：\n%s\n\n"
-        "画幅锁定 %s。请把它拆成镜头清单，**6–8 个镜头**（每个镜头后续都要送 MiniMax-H3 真生成，"
-        "单镜头约 6–12 分钟，镜头过多整条管线跑不完），按契约只输出一个 JSON 代码块。"
+        "画幅锁定 %s。请把它拆成镜头清单，**6–8 个镜头**（每个镜头都要产出一份独立的生成请求），"
+        "按契约只输出一个 JSON 代码块。"
         % (screenplay["envelope"]["artifact_id"], json.dumps(screenplay["payload"], ensure_ascii=False, indent=2), aspect),
         offline=offline)
     logs[-1] = "**③ 分镜 Agent**：%s" % note
     yield emit("\n\n".join(logs), _st(done=3), brief=brief, screenplay=screenplay, shotlist=shotlist)
 
-    # ④ 提示词：为分镜表里每个镜头各生成一份 c04（整片生成计划）
-    logs.append("**④ 提示词 Agent**：正在为每个镜头写英文提示词…（%d 个镜头逐个生成）"
-                % len(((shotlist.get("payload") or {}).get("shots")) or []))
+    # ④ 提示词：为分镜表里每个镜头各生成一份 c04（逐镜头生成请求）
+    shots_n = len(((shotlist.get("payload") or {}).get("shots")) or [])
+    logs.append("**④ 提示词 Agent**：正在为每个镜头写英文提示词…（%d 个镜头逐个生成）" % shots_n)
     yield emit("\n\n".join(logs), _st(done=3, running=4), brief=brief, screenplay=screenplay, shotlist=shotlist)
     gen_items, gen_note, gen_degraded = pipeline.build_all_gen_requests(shotlist, offline=offline)
     genreq_first = gen_items[0]["c04"] if gen_items else None
     logs[-1] = "**④ 提示词 Agent**：%s" % gen_note
     yield emit("\n\n".join(logs), _st(done=4), brief=brief, screenplay=screenplay, shotlist=shotlist, genreq=genreq_first)
 
-    # ⑤ 生成：隧道可达 → 首镜即时真生成 + 其余整片下发 Spark 调度器；不可达 → 回放
-    logs.append("**⑤ 生成 Agent**：正在探测 Spark 上的 ComfyUI…")
-    yield emit("\n\n".join(logs), _st(done=4, running=5), brief=brief, screenplay=screenplay, shotlist=shotlist, genreq=genreq_first)
+    # ⑤ 生成：不内置模型，把 ④ 的生成请求交给可插拔的模型 API 接口
+    logs.append("**⑤ 生成站**：正在把逐镜生成请求交给模型 API 接口…")
+    yield emit("\n\n".join(logs), _st(done=4, running=5), brief=brief, screenplay=screenplay,
+               shotlist=shotlist, genreq=genreq_first)
 
-    reachable, detail = generate.probe_live()
-    preview = generate.replay_shots()
-    gallery = [(p, os.path.basename(p)) for p in preview]
+    result = generate.run_c05(genreq_first, offline=offline,
+                              seed=random.randint(1, 2 ** 31 - 1),
+                              aspect_ratio=aspect, prefix="loom/S001")
+    gallery = [(p, os.path.basename(p)) for p in result.get("shots") or []]
 
-    if not reachable:
-        logs[-1] = ("**⑤ 生成 Agent**：⚠️ **本次为预生成回放**，不是实时生成。\n\n"
-                    "- 原因：%s\n- 探针：%s" % (generate.replay_note() or "隧道不可达", detail))
-        yield emit("\n\n".join(logs), _st(done=5), brief=brief, screenplay=screenplay,
-                   shotlist=shotlist, genreq=genreq_first, gallery=gallery)
-        return
-
-    batch_note = ""
-    if gen_items and not offline:
-        # —— 首镜即时真生成（评审秒级可见）——
-        try:
-            g0 = gen_items[0]
-            gen0 = g0.get("gen") or {}
-            p0 = gen0.get("prompt") or (g0["c04"].get("payload") or {}).get("generation", {}).get("prompt") or ""
-            try:
-                s0 = max(3.0, min(float(gen0.get("duration_seconds") or 5), 8.0))
-            except Exception:
-                s0 = 5.0
-            task0 = generate.submit_async(p0, s0,
-                                          seed=random.randint(1, 2 ** 31 - 1), prefix="loom/S001")
-            first_task = "**首镜已提交**（S001，任务 ID `%s`，预计约 %d 分钟出片）" \
-                % (task0["prompt_id"], max(1, round(task0.get("eta_seconds", 0) / 60)))
-        except Exception as e:
-            first_task = "⚠️ 首镜提交失败：%s（已保留回放预览）" % e
-
-        # —— 其余镜头整片下发给 Spark 调度器 ——
-        try:
-            shots_c03 = (shotlist.get("payload") or {}).get("shots") or []
-            bp = ((shotlist.get("payload") or {}).get("batch_plan")) or {}
-            try:
-                cps = max(1, int(bp.get("candidates_per_shot") or 1))
-            except Exception:
-                cps = 1
-            film_id = (brief["envelope"]["artifact_id"].replace("brief.", "film_"))
-            # 只下发非首镜（首镜已即时真生成，见上）
-            rest = pipeline.batch_plan_to_workflows(gen_items[1:],
-                                                    default_seed=random.randint(1, 2 ** 31 - 1),
-                                                    aspect_text=aspect,
-                                                    candidates_per_shot=cps)
-            if rest:
-                r = generate.submit_batch(film_id, rest)
-                batch_note = ("\n\n**整片任务已下发给 Spark 调度器**（film_id `%s`，%d 个后续镜头，"
-                              "将按 shot 顺序逐个真生成）：\n- 在下方「整片任务」区填 film_id 即可逐镜查看进度"
-                              % (r.get("film_id", film_id), len(rest)))
-        except Exception as e:
-            batch_note = "\n\n⚠️ 整片下发失败（不影响首镜）：%s" % e
+    if result["mode"] == "api":
+        task = result["task"] or {}
+        logs[-1] = (
+            "**⑤ 生成站** ✅ 生成请求已提交到模型接口（后端 `%s`）\n\n"
+            "- 任务 ID：`%s`\n- 接口状态：%s\n- 本次下发：S001（④ 共产出 %d 份同形状的逐镜请求，"
+            "接口接通后按同一入口逐个下发即可）\n\n%s\n\n下方播放的是示例素材，**不是本次生成的结果**。"
+            % (result["backend"], task.get("task_id", "-"), result["detail"],
+               len(gen_items), result["note"]))
     else:
-        first_task = "⚠️ 离线模式（未真正调 LLM / 生成），仅展示管线形状与回放预览" if offline else "（无镜头）"
+        logs[-1] = (
+            "**⑤ 生成站**：%s\n\n- 接口状态：%s（后端 `%s`）\n- 逐镜生成请求：④ 已产出 %d 份"
+            % (result["note"], result["detail"], result["backend"], len(gen_items)))
 
-    logs[-1] = "**⑤ 生成 Agent**：%s%s\n\n- 探针：%s" % (first_task, batch_note, detail)
     yield emit("\n\n".join(logs), _st(done=5), brief=brief, screenplay=screenplay,
                shotlist=shotlist, genreq=genreq_first, gallery=gallery)
 
 
-def query_batch_progress(film_id):
-    """查 Spark 整片调度器上一个批次的逐镜进度。"""
-    fid = (film_id or "").strip()
-    if not fid:
-        return "请填 film_id（整片任务下发后，状态栏会给出）。"
-    try:
-        r = generate.query_batch(fid)
-    except Exception as e:
-        return "查询整片失败：%s（隧道可能断开或批次不存在）" % e
-    lines = ["整片任务 `%s` · 批次状态：**%s**" % (r.get("film_id"), r.get("status"))]
-    st_map = {"pending": "排队中", "queued": "排队中", "running": "生成中",
-              "done": "✅ 完成", "error": "❌ 失败"}
-    qc_map = {"pass": "质检✅", "pass_with_notes": "质检⚠️", "fail": "质检❌",
-              "error": "质检error", "skipped": "未质检"}
-    for s in r.get("shots", []):
-        mark = st_map.get(s.get("status"), s.get("status"))
-        p = s.get("result") or ""
-        base = os.path.basename(p) if p else ""
-        qc = s.get("qc") or {}
-        qc_line = ""
-        if s.get("status") == "done" and qc:
-            v = qc.get("verdict", "?")
-            fails = qc.get("failed_items") or []
-            qc_line = " · %s%s" % (qc_map.get(v, v), ("（失败项：%s）" % "、".join(fails)) if fails else "")
-        lines.append("- `%s`：%s%s%s" % (s.get("shot_id"), mark,
-                                         (" → %s" % base) if base else "", qc_line))
-    # ⑦ 剪辑成片
-    film = r.get("film")
-    if film:
-        fpath = film.get("path") or ""
-        lines.append("\n**⑦ 剪辑成片已生成** ✅：`%s`（Spark 端 %d 个质检通过镜头 ffmpeg 拼接）"
-                     % (os.path.basename(fpath), film.get("shots_in_film", 0)))
-        lines.append("成片位于 Spark `~/loom/films/`（评审可用该文件作为最终短片，c07 决策单在 `%s`）"
-                     % (film.get("c07_path") or ""))
-    return "\n".join(lines)
-
-
-def query_generation(prompt_id):
-    """取回已提交的真生成任务结果。"""
-    pid = (prompt_id or "").strip()
-    if not pid:
-        return "请填任务 ID（提交真生成后，状态栏会给出）。", None
-    r = generate.query_task(pid)
-    if r["status"] == "done":
-        return ("**真生成完成**（用时 %d 秒）：%s" % (r.get("elapsed", 0), r["detail"]),
-                [(r["path"], os.path.basename(r["path"]))])
-    label = {"queued": "排队中", "running": "生成中", "unknown": "未找到"}.get(r["status"], r["status"])
+def query_generation(task_id):
+    """取回 ⑤ 站提交给模型接口的生成任务结果。"""
+    tid = (task_id or "").strip()
+    if not tid:
+        return ("请填任务 ID（提交成功后状态栏会给出，形如 `a1b2c3d4-…`）。", None)
+    r = generate.query(tid)
+    if r["status"] == "succeeded":
+        path = r.get("path") or ""
+        msg = "**生成完成**（用时 %d 秒）：%s" % (r.get("elapsed", 0), r["detail"])
+        return (msg, [(path, os.path.basename(path))] if path else None)
+    label = {"queued": "排队中", "running": "生成中", "failed": "失败",
+             "unknown": "未找到"}.get(r["status"], r["status"])
     return "任务状态：**%s** — %s" % (label, r["detail"]), None
 
 
@@ -347,7 +246,6 @@ def build_ui():
             with gr.Column(scale=4):
                 # 七站进度条。它显示在 status 上方，但在 outputs 里排在**末尾**——
                 # 组件位置与数据流顺序解耦，这样前 6 个输出的索引不受影响。
-                # 这一列同时是任务 ID / film_id 的展示区，所以进度条只加在顶部，不动配比。
                 progress = gr.HTML(theme.progress_html(), padding=False)
                 status = gr.Markdown("等待输入…", elem_classes=["loom-status"])
 
@@ -360,81 +258,50 @@ def build_ui():
                 c03 = gr.JSON(label="c03_shotlist")
             with gr.Tab("④ 提示词 c04"):
                 c04 = gr.JSON(label="c04_gen_request")
-            with gr.Tab("⑤ 生成结果"):
-                gallery = gr.Gallery(label="镜头（真生成 / 预生成回放）", columns=3, height=320)
+            with gr.Tab("⑤ 生成接口"):
+                # 这一页是「设计说明书」本身：⑤ 站接什么、怎么接、现在接没接，
+                # 全部写成文字放在这里，评审不用读代码就能判断。
+                gr.Markdown(generate.interface_markdown())
+                gr.Markdown(gen_interface_status())
+                gallery = gr.Gallery(label="产物形态预览（示例素材 / 接口返回的成片）",
+                                     columns=3, height=320)
 
         run_btn.click(run_pipeline,
                       inputs=[logline, duration, aspect, visual_style, audio_style,
                               requested_shots, auto_gate, offline],
                       outputs=[status, c01, c02, c03, c04, gallery, progress])
 
-        # 自检是运维信息（LLM 配置 / 隧道连通 / 回放素材数），放在契约产物之后：
-        # 它不该占首屏——评审一进来先看到「未配置」「未连通」会直接扣分。
+        # 自检是运维信息（LLM 配置 / 生成接口状态 / 示例素材数），放在契约产物之后：
+        # 它不该占首屏——评审一进来先看到「未配置」「未接入」会直接扣分。
         # 折叠且默认关闭，想确认系统状态的人自然会找到它。
         with gr.Accordion("运行状态自检", open=False):
             gr.Markdown(self_check())
 
-        with gr.Accordion("隧道状态（创空间 ↔ DGX Spark 回源链路）", open=False):
+        with gr.Accordion("查询生成任务（取回模型接口产出的视频）", open=False):
             gr.Markdown(
-                "真生成跑在本地 DGX Spark 的 ComfyUI 上。Spark 没有公网入口，"
-                "由它上面的 natapp 客户端主动外拨、在云端换一个公网地址，创空间访问这个地址回源。"
-                "natapp 免费隧道的地址**可能变**，所以这里不写死一个地址："
-                "Spark 每 5 分钟把当前地址报过来，用时再逐个探活。")
-            tunnel_md = gr.Markdown(tunnel_status())
+                "⑤ 站把生成请求提交给模型接口后，会拿到一个**任务 ID**。"
+                "把任务 ID 粘进来即可查询进度、取回成片（容器重启会清空任务记录）。")
             with gr.Row():
-                refresh_tunnel_btn = gr.Button("重新解析隧道地址", scale=1)
-            refresh_tunnel_btn.click(lambda: tunnel_status(force=True), outputs=[tunnel_md])
-
-            # 上报端点：Gradio 会自动把它暴露成 /gradio_api/run/report_tunnel，
-            # Spark 上的 loom_watch.py 就调这个把新地址送过来。组件设成不可见——
-            # 它是给机器用的，不是给人点的。
-            with gr.Row(visible=False):
-                rep_url = gr.Textbox()
-                rep_token = gr.Textbox()
-                report_btn = gr.Button()
-            rep_out = gr.Markdown(visible=False)
-            report_btn.click(tunnel_report, inputs=[rep_url, rep_token], outputs=[rep_out],
-                             api_name="report_tunnel")
-
-        with gr.Accordion("查询生成任务（取回真生成视频）", open=False):
-            gr.Markdown(
-                "真生成跑在本地 DGX Spark 的 ComfyUI 上，MiniMax-H3 一个镜头要 6–12 分钟，"
-                "**不会同步等出片**——提交后立刻返回任务 ID，界面先给参考预览。"
-                "把任务 ID 粘进来就能查进度、取回成片。（容器重启会清空任务记录）")
-            with gr.Row():
-                task_id = gr.Textbox(label="任务 ID（prompt_id）", scale=3, placeholder="例：a1b2c3d4-...")
+                task_id = gr.Textbox(label="任务 ID（task_id）", scale=3, placeholder="例：a1b2c3d4-...")
                 query_btn = gr.Button("查询", scale=1)
             task_status = gr.Markdown("")
-            task_video = gr.Gallery(label="真生成结果", columns=2, height=260)
+            task_video = gr.Gallery(label="生成结果", columns=2, height=260)
             query_btn.click(query_generation, inputs=[task_id], outputs=[task_status, task_video])
-
-        with gr.Accordion("整片任务（Spark 逐镜生成进度）", open=False):
-            gr.Markdown(
-                "跑完一句话后，首镜会即时真生成（上方取回），**其余镜头打包成一个「整片任务」**"
-                "下发给本地 DGX Spark 上的调度器，由它按 shot 顺序逐个真生成——不受创空间休眠影响。"
-                "把整片任务的 film_id 粘进来就能看到每个镜头的进度；全部生成后是整部片子的逐镜成片。"
-                "（Spark 重启后仍会从断点续跑）")
-            with gr.Row():
-                batch_id = gr.Textbox(label="整片任务 film_id", scale=3, placeholder="例：film_20260909_...")
-                batch_btn = gr.Button("查整片进度", scale=1)
-            batch_status = gr.Markdown("")
-            batch_btn.click(query_batch_progress, inputs=[batch_id], outputs=[batch_status])
 
         # 生成器逐段 yield 依赖队列；不开队列时界面会停在「等待输入…」不更新
         demo.queue(default_concurrency_limit=4)
-        _mount_tunnel_api(demo)
 
         gr.Markdown("""
 ---
-### 七站是怎么分的（创空间里跑 ①–⑤，⑥⑦ 仍在本地节点）
+### 七站是怎么分的（创空间里跑 ①–⑤，⑥⑦ 在创空间之外的本地节点）
 
 | 站 | 契约 | 职责 | 本次运行 |
 |---|---|---|---|
 | ① 片约 | c01 | 人写一句话，定死后面不能改的东西 | 界面输入 |
 | ② 编剧 | c02 | 展开成带场景编号的剧本（**强制人工关口**） | 真跑 |
 | ③ 分镜 | c03 | 拆镜头，逐镜标注 T2V / I2V / R2V | 真跑 |
-| ④ 提示词 | c04 | 英文提示词 + 时间码 + 节点 ID 映射 | 真跑 |
-| ⑤ 生成 | c05 | POST 到 Spark 上的 ComfyUI（MiniMax-H3） | 隧道可达则真跑，否则标注回放 |
+| ④ 提示词 | c04 | 逐镜头产出标准化生成请求（英文提示词 + 时间码 + 画幅） | 真跑 |
+| ⑤ 生成 | c05 | **可插拔的模型 API 接口**：把请求发出去、把成片取回来 | 接口就绪（未绑定模型） |
 | ⑥ 质检 | c06 | ffprobe 硬指标 + 提示词遵循度 | 本地节点 |
 | ⑦ 剪辑 | c07 | 剪辑决策单（**强制人工关口**） | 本地节点 |
 

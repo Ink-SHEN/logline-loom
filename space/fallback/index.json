@@ -1,5 +1,5 @@
 {
-  "note": "以下均为 LOOM 管线上真实生成的镜头（MiniMax-H3，跑在 NVIDIA DGX Spark 上）。素材来自 2026-09-09 本地 studio.mjs 完整管线产出的 c05 候选（shots/<candidate_id>/video.mp4），H3 原生带音频、24fps。仅用于真生成后端不可达时的回放演示，界面会明确标注「本次为预生成回放」，不冒充实时生成。",
+  "note": "以下均为 LOOM 管线上真实生成的镜头（MiniMax-H3，2026-09-09 本地 studio.mjs 完整管线产出的 c05 候选，来自 shots/<candidate_id>/video.mp4；H3 原生带音频、24fps）。**用途是展示 ⑤ 生成站的产物形态**：⑤ 站本身不内置生成模型，只有一层可插拔的模型 API 接口（见 space/generate.py），未接入模型时界面会明确标注这些是「参考回放（非模型生成）」，绝不冒充本次生成结果。",
   "source": "shots/S001_c01、S006_c01、S010_c01、S026_c01 的 video.mp4（2026-09-09 生成批次，本地 studio.mjs 完整管线）",
   "shots": [
     {

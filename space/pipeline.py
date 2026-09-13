@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-"""创空间里的编排：①片约 → ②编剧 → ③分镜 → ④提示词 → ⑤生成（真跑 / 回放）。
+"""创空间里的编排：①片约 → ②编剧 → ③分镜 → ④提示词。
+
+⑤ 生成站不在这里：它是一层可插拔的模型 API 接口，见 space/generate.py。
+本模块只负责 Agent 之间的契约交接与闸门。
 
 与 Node 版 run.js 的三个约定保持一致，改一处就得改另一处：
   1. envelope 由程序覆盖（artifact_id / created_at / upstream_refs / producer），模型填的只是占位
@@ -9,11 +12,10 @@
 import copy
 import json
 import os
-import random
 import re
 import time
 
-from . import config, generate, llm, prompts, validate
+from . import config, llm, prompts, validate
 
 AGENTS = {
     "screenwriter": {
@@ -345,172 +347,3 @@ def _fallback(slug, upstream_id, reason):
             "reason": "剧本确认——强制人工关口，批准前下游 Agent 必须阻塞",
         })
     return doc
-
-
-def generation_step(gen_request, wait_for_live=False):
-    """⑤生成：探测隧道 → 可达就异步提交真生成，不可达就回放（回放一定标注）。
-
-    H3 在 Spark 上一个镜头要 6–12 分钟，同步等出片在评审场景里不成立，
-    所以默认异步：提交完立刻返回，界面先放参考预览（标注清楚不是本次结果），
-    评委拿 prompt_id 回头再查。wait_for_live=True 才走原来的同步等待（本地自测用）。
-    """
-    reachable, detail = generate.probe_live()
-    preview = generate.replay_shots()
-
-    if not reachable:
-        return {
-            "mode": "replay",
-            "detail": detail,
-            "shots": preview,
-            "note": generate.replay_note() or "隧道不可达，当前展示预生成回放",
-        }
-
-    prompt_text, seconds = _first_prompt(gen_request)
-    try:
-        if wait_for_live:
-            pid = generate.submit_live(prompt_text, seconds, seed=random.randint(1, 2 ** 31 - 1))
-            path, status = generate.poll_live(pid)
-            if path:
-                return {"mode": "live", "detail": detail, "shots": [path],
-                        "note": status, "prompt_id": pid}
-            return {"mode": "replay", "detail": detail, "shots": preview,
-                    "note": "%s（本次为预生成回放）" % status, "prompt_id": pid}
-
-        task = generate.submit_async(prompt_text, seconds,
-                                     seed=random.randint(1, 2 ** 31 - 1))
-        eta = task.get("eta_seconds", 0)
-        return {
-            "mode": "live_async",
-            "detail": detail,
-            "shots": preview,
-            "prompt_id": task["prompt_id"],
-            "eta_seconds": eta,
-            "note": ("已向 Spark 上的 ComfyUI 提交真生成任务，预计 %d 分钟出片。"
-                     "下方播放的是**参考预览**（此前生成的镜头），**不是本次生成的结果**；"
-                     "用任务 ID `%s` 在下方「查询生成任务」取回真生成视频。"
-                     % (max(1, round(eta / 60)), task["prompt_id"])),
-        }
-    except Exception as e:
-        return {"mode": "replay", "detail": detail, "shots": preview,
-                "note": "真生成提交失败：%s。当前展示预生成回放" % e}
-
-
-def _first_prompt(gen_request):
-    """从 c04 里取出要送进 ComfyUI 的提示词与时长。
-
-    c04_gen_request 契约的 payload 是**单个镜头**的请求（required 是 shot_id /
-    candidate_id，不是数组），所以正路是读 payload.generation。
-    数组形态只是给兼容旧输出留的退路。
-    """
-    payload = gen_request.get("payload") or {}
-
-    gen = payload.get("generation")
-    if isinstance(gen, dict) and gen.get("prompt"):
-        return _clip(gen.get("prompt"), gen.get("duration_seconds"))
-
-    shots = payload.get("shots") or payload.get("requests") or []
-    if isinstance(shots, dict):
-        shots = list(shots.values())
-    for s in shots:
-        if not isinstance(s, dict):
-            continue
-        text = s.get("prompt") or s.get("prompt_text") or (s.get("workflow") or {}).get("prompt")
-        if text:
-            return _clip(text, s.get("duration_seconds") or s.get("seconds"))
-    return "cinematic science fiction shot, atmospheric, shallow depth of field", 5.0
-
-
-def _clip(text, seconds):
-    try:
-        secs = float(seconds or 5)
-    except Exception:
-        secs = 5.0
-    # H3 单次出片上限 15 秒；创空间演示取 3–8 秒，兼顾等待时间与画面完整度
-    return text, max(3.0, min(secs, 8.0))
-
-
-def build_all_gen_requests(shotlist_doc, offline=False):
-    """④ 逐镜头生成 c04（为整片调度器准备每镜一份生成请求）。
-
-    返回 (列表, 说明, 是否有降级)。列表元素形如：
-      { "shot_id", "workflow_type", "gen": <c04 的 generation dict>, "c04": <完整 c04 doc> }
-
-    本轮聚焦 T2V：即使某镜头 c03 标了 I2V/R2V，也要求提示词 Agent 按 T2V 输出
-    （创空间当前只有 T2V 工作流；非 T2V 镜头降级为文生，assets 留空）。
-    每个镜头独立调一次 prompt_writer（④ Agent），保证各自过契约校验。
-    """
-    shots = ((shotlist_doc.get("payload") or {}).get("shots")) or []
-    out, notes, degraded_any = [], [], False
-
-    for shot in shots:
-        if not isinstance(shot, dict):
-            continue
-        sid = shot.get("shot_id") or shot.get("order") or "?"
-        wtype = (shot.get("workflow_type") or "T2V").upper()
-        if wtype not in ("T2V", "I2V", "R2V"):
-            wtype = "T2V"
-        if wtype != "T2V":
-            degraded_any = True
-        user_msg = (
-            "镜头清单（c03_shotlist，artifact_id=%s）：\n%s\n\n"
-            "请为镜头 **%s** 生成生成请求：英文提示词 + 时间码 + 节点 ID 映射。\n"
-            "⚠️ c04 契约 payload 是**单个镜头对象**，只输出这一个镜头的 JSON。\n"
-            "⚠️ 本镜 c03 标注 workflow_type **%s**。当前整片生成统一按 **T2V**：把镜头文字描述写进 "
-            "generation.prompt，workflow.type 用 T2V、api_json 用 workflow_api_t2v.json，assets 留空。"
-            % (shotlist_doc["envelope"]["artifact_id"],
-               json.dumps(shotlist_doc["payload"], ensure_ascii=False, indent=2),
-               sid, wtype))
-        req, note, degraded = call_agent("prompt_writer", shotlist_doc, user_msg, offline=offline)
-        gen = ((req.get("payload") or {}).get("generation")) or {}
-        out.append({"shot_id": sid, "workflow_type": "T2V",
-                    "gen": gen, "c04": req, "note": note})
-        notes.append("%s：%s" % (sid, note))
-        if degraded:
-            degraded_any = True
-
-    summary = "已为 %d 个镜头生成生成请求（按 T2V 整片计划）" % len(out)
-    if degraded_any:
-        summary += "（含非 T2V 镜头降级为 T2V，或个别降级为示例产物）"
-    return out, summary, degraded_any
-
-
-def batch_plan_to_workflows(gen_items, default_seed=None, aspect_text=None,
-                            candidates_per_shot=1):
-    """把逐镜 c04 的 generation 转成给调度器的 T2V workflow dict 清单。
-
-    每镜按 candidates_per_shot 展开成多份候选（同 prompt、不同 seed），让 Spark 逐候选
-    真生成、逐候选质检，⑦ 剪辑择优。候选 shot_id 形如 S001_c00 / S001_c01 / S001_c02，
-    并携带 group_id（= 无候选后缀的镜号 S001）供 Spark 按镜分组取最高分。
-
-    返回 [{ shot_id, group_id, workflow_type, workflow, qc_targets }]。
-    seed 缺省用时间派生的随机种子；prefix 形如 film/S<shot>_c<n>，便于 Spark 归档。
-    """
-    from . import generate as _g
-    import random as _r
-    out = []
-    for it in gen_items:
-        gen = it.get("gen") or {}
-        prompt = gen.get("prompt")
-        if not prompt:
-            continue
-        try:
-            seconds = max(3.0, min(float(gen.get("duration_seconds") or 5), 8.0))
-        except Exception:
-            seconds = 5.0
-        sid = str(it["shot_id"])
-        num = "".join(ch for ch in sid if ch.isdigit()) or "0"
-        group = "S%s" % num
-        n = max(1, int(candidates_per_shot or 1))
-        base_seed = default_seed if default_seed is not None else _r.randint(1, 2 ** 31 - 1)
-        base_seed += 31 * len(out)  # 每镜推进一段，保证跨镜 seed 不撞
-        for ci in range(n):
-            cid = "%s_c%02d" % (group, ci)
-            wf = _g.build_t2v_workflow(prompt, seconds,
-                                       seed=base_seed + ci, prefix="film/%s" % cid)
-            out.append({"shot_id": cid, "group_id": group, "workflow_type": "T2V",
-                        "workflow": wf,
-                        "qc_targets": {"duration_seconds": round(seconds, 2),
-                                       "aspect_ratio_text": aspect_text or "16:9 (Widescreen)",
-                                       "megapixels": None,
-                                       "prompt_en": prompt}})
-    return out

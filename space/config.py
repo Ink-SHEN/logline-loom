@@ -79,34 +79,33 @@ def llm_timeout() -> int:
     return int(os.environ.get("LOOM_LLM_TIMEOUT_MS") or 300000) // 1000
 
 
-def comfy_url() -> str:
-    """第一个候选地址。新配置请用 LOOM_SPARK_BASE_URL（可填多个，逗号分隔，逐个探活）。"""
-    raw = os.environ.get("LOOM_SPARK_BASE_URL") or os.environ.get("LOOM_COMFY_URL") or ""
-    return raw.split(",")[0].strip().rstrip("/")
+# ---------------------------------------------------------------- ⑤ 生成接口
+#
+# 创空间不内置、也不绑定任何具体的视频生成模型，也不依赖仓库外的私有节点。
+# ⑤ 站对外只有一层标准化接口（见 space/generate.py 头部契约）：
+# 把 ④ 产出的生成请求 POST 出去、把任务状态取回来。换模型 = 改环境变量。
 
 
-def proxy_token() -> str:
-    return os.environ.get("LOOM_PROXY_TOKEN") or ""
+def gen_backend() -> str:
+    """后端选择：http（默认，通用模型 API） / replay（内置参考回放）。"""
+    return (os.environ.get("LOOM_GEN_BACKEND") or "http").strip().lower()
 
 
-def auth_headers():
-    """访问 Spark 代理的请求头。token 两端必须完全一致，否则代理返回 401。"""
-    h = {"Content-Type": "application/json"}
-    t = proxy_token()
-    if t:
-        h["Authorization"] = "Bearer %s" % t
-    return h
+def gen_api_url() -> str:
+    """模型服务基址，形如 https://<host>/v1。空 = 接口就绪但未接入模型。"""
+    return (os.environ.get("LOOM_GEN_API_URL") or "").strip().rstrip("/")
 
 
-def probe_timeout() -> float:
-    return float(os.environ.get("LOOM_PROBE_TIMEOUT") or 5)
+def gen_api_key() -> str:
+    """模型服务鉴权 Key。为空时不发送 Authorization 头（本地/内网服务常见）。"""
+    return os.environ.get("LOOM_GEN_API_KEY") or ""
 
 
-def generate_budget() -> int:
-    """真生成最长等待秒数，超时改用回放并如实标注。"""
-    return int(os.environ.get("LOOM_GENERATE_BUDGET") or 240)
+def gen_api_model() -> str:
+    """模型名，随提交请求一起发；服务端不需要就留空。"""
+    return (os.environ.get("LOOM_GEN_API_MODEL") or "").strip()
 
 
-def generation_mode() -> str:
-    """auto（默认，探测后自动切） / live（只真生成，不可达就报错） / replay（只回放）"""
-    return (os.environ.get("LOOM_GENERATION_MODE") or "auto").lower()
+def gen_timeout() -> float:
+    """单次 HTTP 调用超时秒数。生成类接口通常提交即返回，30 秒足够。"""
+    return float(os.environ.get("LOOM_GEN_TIMEOUT") or 30)
