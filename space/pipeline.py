@@ -347,3 +347,52 @@ def _fallback(slug, upstream_id, reason):
             "reason": "剧本确认——强制人工关口，批准前下游 Agent 必须阻塞",
         })
     return doc
+
+
+
+def build_all_gen_requests(shotlist_doc, offline=False):
+    """④ 逐镜头产出 c04 生成请求（每镜一份，交给 ⑤ 生成接口逐个下发）。
+
+    返回 (列表, 说明, 是否有降级)。列表元素形如：
+      { "shot_id", "workflow_type", "gen": <c04 的 generation dict>, "c04": <完整 c04 doc> }
+
+    ⑤ 站是一层可插拔的模型 API 接口（见 generate.py），它只消费 `gen` 里的
+    prompt / duration_seconds；`c04` 整份产物仍要过契约校验，留在界面上可查。
+
+    本轮聚焦 T2V：即使某镜头 c03 标了 I2V/R2V，也要求提示词 Agent 按 T2V 输出
+    （当前生成接口按文生视频收敛；非 T2V 镜头降级为文生，assets 留空）。
+    每个镜头独立调一次 prompt_writer（④ Agent），保证各自过契约校验。
+    """
+    shots = ((shotlist_doc.get("payload") or {}).get("shots")) or []
+    out, notes, degraded_any = [], [], False
+
+    for shot in shots:
+        if not isinstance(shot, dict):
+            continue
+        sid = shot.get("shot_id") or shot.get("order") or "?"
+        wtype = (shot.get("workflow_type") or "T2V").upper()
+        if wtype not in ("T2V", "I2V", "R2V"):
+            wtype = "T2V"
+        if wtype != "T2V":
+            degraded_any = True
+        user_msg = (
+            "镜头清单（c03_shotlist，artifact_id=%s）：\n%s\n\n"
+            "请为镜头 **%s** 生成生成请求：英文提示词 + 时间码 + 节点 ID 映射。\n"
+            "⚠️ c04 契约 payload 是**单个镜头对象**，只输出这一个镜头的 JSON。\n"
+            "⚠️ 本镜 c03 标注 workflow_type **%s**。当前整片生成统一按 **T2V**：把镜头文字描述写进 "
+            "generation.prompt，workflow.type 用 T2V、api_json 用 workflow_api_t2v.json，assets 留空。"
+            % (shotlist_doc["envelope"]["artifact_id"],
+               json.dumps(shotlist_doc["payload"], ensure_ascii=False, indent=2),
+               sid, wtype))
+        req, note, degraded = call_agent("prompt_writer", shotlist_doc, user_msg, offline=offline)
+        gen = ((req.get("payload") or {}).get("generation")) or {}
+        out.append({"shot_id": sid, "workflow_type": "T2V",
+                    "gen": gen, "c04": req, "note": note})
+        notes.append("%s：%s" % (sid, note))
+        if degraded:
+            degraded_any = True
+
+    summary = "已为 %d 个镜头生成生成请求（按 T2V 整片计划）" % len(out)
+    if degraded_any:
+        summary += "（含非 T2V 镜头降级为 T2V，或个别降级为示例产物）"
+    return out, summary, degraded_any
